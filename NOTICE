@@ -1,0 +1,7 @@
+TaskDelegate
+Copyright 2026 TaskDelegate contributors.
+
+TaskDelegate is an original low-context delegation skill/package.
+If you fork, redistribute, or publish a derivative package, please preserve this NOTICE file and clearly indicate that your work is based on TaskDelegate.
+
+This product includes no bundled OpenCode, Codex, Claude Code, Kimi, Qwen, Gemini, or other third-party backend CLI binaries. Adapters are lightweight wrappers only.

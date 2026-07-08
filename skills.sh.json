@@ -1,0 +1,12 @@
+{
+  "$schema": "https://skills.sh/schemas/skills.sh.schema.json",
+  "groupings": [
+    {
+      "title": "TaskDelegate",
+      "description": "Low-context multi-backend task delegation for CLI coding agents.",
+      "skills": [
+        "task-delegate"
+      ]
+    }
+  ]
+}
