@@ -1,7 +1,7 @@
 {
   "name": "task-delegate",
-  "version": "0.1.0",
-  "description": "Low-context multi-backend delegation for CLI coding agents through compact briefs, bundled adapters, and structured results.",
+  "version": "0.2.0",
+  "description": "One portable delegation interface for discovering and dispatching bounded tasks to CLI coding agents with manual review and normalized results.",
   "type": "module",
   "bin": {
     "task-delegate": "bin/task-delegate.mjs"
@@ -15,16 +15,23 @@
     "prepublishOnly": "npm run check && npm test && npm run pack:dry-run",
     "doctor": "node bin/task-delegate.mjs doctor",
     "list-backends": "node bin/task-delegate.mjs list-backends",
-    "init-brief": "node bin/task-delegate.mjs init-brief --out task-delegate.brief.md --force"
+    "init-brief": "node bin/task-delegate.mjs init-brief --out task-delegate.brief.md --force",
+    "targets": "node bin/task-delegate.mjs targets",
+    "delegate:dry-run": "node bin/task-delegate.mjs delegate --to opencode --task \"Dry-run delegation\" --cd . --dry-run --allow-dirty"
   },
   "keywords": [
     "agent-skills",
-    "delegation",
-    "opencode",
-    "codex",
+    "antigravity",
     "claude-code",
+    "codex",
+    "coding-agent",
+    "delegation",
+    "grok",
+    "kimi",
     "low-context",
-    "coding-agent"
+    "multi-agent",
+    "opencode",
+    "zai"
   ],
   "license": "Apache-2.0",
   "engines": {

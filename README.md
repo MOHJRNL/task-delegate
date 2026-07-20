@@ -15,6 +15,40 @@ The first version is intentionally lean:
 - **Adapters:** bundled inside the package; users do not install adapters separately
 - **Roadmap:** GitHub, DevSecOps, Python reporting, Kimi/Qwen/Gemini adapters later
 
+
+## TaskDelegate v0.2 — unified delegation
+
+TaskDelegate now provides one portable delegation interface while preserving the original `run --brief` workflow for backward compatibility.
+
+```bash
+npx task-delegate targets
+npx task-delegate delegate
+npx task-delegate delegate --to codex --task "Fix the failing tests" --cd .
+```
+
+Available targets are discovered dynamically:
+
+1. OpenCode
+2. Codex
+3. Claude Code
+4. Antigravity (`agy`)
+5. Kimi
+6. z.ai
+7. Grok
+8. Auto-select — coming soon
+
+Manual review is the default. Plan mode is supported. Auto-select and bounded automatic review remain roadmap items; v0.2 does not create recursive agent loops.
+
+Core architecture:
+
+- one skill
+- one CLI
+- one result contract: `task-delegate.result.v2`
+- one adapter registry
+- dynamic target discovery
+- no server, database, MCP requirement, or workflow engine
+- backend agents never commit or push
+
 ## Why TaskDelegate exists
 
 Most orchestrator agents waste context when they try to inspect, implement, debug, and review everything inside one conversation. TaskDelegate moves implementation-heavy work into a separate CLI-agent run and returns only a compact result for review.

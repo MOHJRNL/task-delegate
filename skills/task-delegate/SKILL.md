@@ -1,103 +1,60 @@
 ---
 name: task-delegate
-description: Use this skill when the user wants to delegate a bounded coding task from Claude, Cursor, Codex, Gemini, or another orchestrator agent to CLI coding agents with low context usage. TaskDelegate creates a compact brief, runs a selected backend adapter, captures compact structured results, and keeps review/commit responsibility with the orchestrator. Use OpenCode as the stable default backend. Codex and Claude are experimental/manual backends in v0.1. Do not use for tiny inline edits, vague discovery, direct production changes without review, or tasks requiring GitHub PR automation.
+description: Use TaskDelegate to hand off bounded implementation work to an available CLI coding agent through one portable interface. Discover OpenCode, Codex, Claude Code, Antigravity, Kimi, z.ai, and Grok targets, run manual delegation by default, receive one normalized result contract, and keep review and commit responsibility with the originating agent or user. Auto-select and bounded automatic review are roadmap features, not active recursive loops.
 license: Apache-2.0
 metadata:
-  version: "0.1.0"
-  backends:
-    opencode: stable
-    codex: experimental
-    claude: experimental
+  version: "0.2.0"
+  default_mode: manual
+  result_contract: task-delegate.result.v2
 ---
 
 # TaskDelegate
 
-You are the orchestrator. The backend CLI agent is the implementer.
+TaskDelegate is one skill and one CLI for portable agent-to-agent delegation.
 
-Your job is to compress the user's task into a small, complete brief, send it to the selected backend, collect the compact result, then review the diff and gates before accepting anything.
-
-## Use this skill when
-
-- The task is implementation-heavy.
-- The task is bounded enough to describe clearly.
-- The user wants efficient delegation with low context usage.
-- A backend CLI agent can work from the repository plus a compact brief.
-- The final decision should remain with the orchestrator or human reviewer.
-
-## Do not use this skill when
-
-- The edit is tiny and faster to do directly.
-- The task is vague, strategic, or product-discovery-only.
-- The task requires secrets, credentials, or private tokens.
-- The task requires GitHub PR automation.
-- The user expects the backend agent to commit or push.
-
-## Backend policy v0.1
-
-- `opencode` is stable and should be the default.
-- `codex` is experimental and should use `manual` unless the user explicitly accepts a different mode.
-- `claude` is experimental and should use `manual` or `plan` unless the user explicitly accepts a different mode.
-
-## Core rules
-
-- Backend agents must not commit.
-- Backend agents must not push.
-- Backend agents must not reset, clean, or rewrite git history.
-- Backend agents must not read `.env`, key, certificate, or secret files.
-- Backend agents must not modify files outside the project directory.
-- Backend agents must not install new packages unless explicitly allowed in the brief.
-- The orchestrator must review the final diff before accepting the result.
-- The orchestrator must re-run gates or clearly report that gates were not run.
-
-## Low-context rules
-
-- Preferred brief size: 40-80 lines.
-- Default maximum brief size: 120 lines.
-- Do not paste full chat history into the brief.
-- Do not paste large files unless necessary.
-- On retry, send a delta brief only.
-- Load backend-specific references only when needed.
-
-## Default process
-
-1. Decide whether delegation is appropriate.
-2. Select backend:
-   - simple/mechanical: `opencode`
-   - reasoning-heavy: `codex`
-   - architecture-sensitive: `claude`
-3. Write a compact brief using `references/brief-template.md`.
-4. Run the relay:
+## Primary interface
 
 ```bash
-node skills/task-delegate/scripts/relay.mjs --backend opencode --mode safe-auto --brief /path/to/brief.md --cd /path/to/project
+task-delegate targets
+task-delegate delegate
+task-delegate delegate --to codex --task "Fix the failing tests" --cd .
 ```
 
-5. Read `result.json`.
-6. Inspect changed files and diff stat.
-7. Re-run tests/lint/build where practical.
-8. Summarize:
-   - what changed
-   - files changed
-   - gates run
-   - risks
-   - next action
+When no target is supplied, show the available target list and ask the user to choose.
 
-## References
+## Targets
 
-- `references/brief-template.md`
-- `references/backend-selection.md`
-- `references/permission-policy.md`
-- `references/result-schema.md`
-- `references/review-checklist.md`
-- `references/roadmap.md`
+- OpenCode
+- Codex
+- Claude Code
+- Antigravity (`agy`)
+- Kimi
+- z.ai through the OpenCode adapter and `zai-coding-plan/glm-4.7` default model
+- Grok
+- Auto-select: coming soon
 
+## Operating policy
 
-## Public usage
+- Manual review is the default.
+- Plan mode is allowed.
+- Automatic delegation is not active in v0.2.
+- Do not create open recursive agent loops.
+- Backend agents must not commit, push, rewrite history, read secrets, or write outside the project.
+- Require a clean worktree unless the user explicitly accepts `--allow-dirty`.
+- The originating agent reviews the normalized result and Git diff before presenting an outcome.
+- Use the legacy `run --brief ...` command only for advanced or backward-compatible workflows.
 
-TaskDelegate can be used either as an installed Agent Skill or through the bundled npm CLI:
+## Result contract
 
-```bash
-npx task-delegate run --backend opencode --mode safe-auto --brief brief.md --cd .
-```
+Each delegation writes `.task-delegate/runs/<task-id>/result.json` using `task-delegate.result.v2`, plus the compact brief, prompt, stdout, stderr, changed-file list, and diff stat.
 
-The OpenCode, Codex, and Claude adapter scripts are bundled with the skill. Backend CLIs themselves must be installed and authenticated separately.
+## Review flow
+
+1. Discover targets.
+2. Select an explicit target.
+3. Generate the bounded brief internally.
+4. Dispatch through the registry adapter.
+5. Read the normalized result.
+6. Review the diff and verification.
+7. Present accept, revise, cross-review, or discard options.
+8. Never commit automatically.
