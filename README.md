@@ -1,416 +1,332 @@
 # TaskDelegate
 
+[![npm](https://img.shields.io/npm/v/task-delegate)](https://www.npmjs.com/package/task-delegate)
+[![license](https://img.shields.io/npm/l/task-delegate)](LICENSE)
 [![skills.sh](https://skills.sh/b/MOHJRNL/task-delegate)](https://skills.sh/MOHJRNL/task-delegate)
 
-**TaskDelegate** is a low-context delegation skill and CLI that lets coding agents hand off bounded implementation tasks to CLI coding agents through compact briefs, safe execution modes, bundled adapters, and structured results.
-
-The first version is intentionally lean:
-
-- **Language:** Node.js
-- **Stable backend:** OpenCode
-- **Experimental backends:** Codex, Claude Code
-- **Default OpenCode mode:** `safe-auto`
-- **Safety:** deny rules, no commit boundary, clean working tree preflight
-- **Output:** compact `result.json`
-- **Adapters:** bundled inside the package; users do not install adapters separately
-- **Roadmap:** GitHub, DevSecOps, Python reporting, Kimi/Qwen/Gemini adapters later
-
-
-## TaskDelegate v0.2 — unified delegation
-
-TaskDelegate now provides one portable delegation interface while preserving the original `run --brief` workflow for backward compatibility.
+**TaskDelegate** is a portable CLI and agent skill for handing bounded coding tasks to local CLI coding agents while keeping review, approval, commits, and publishing with the originating user or agent.
 
 ```bash
-npx task-delegate targets
-npx task-delegate delegate
-npx task-delegate delegate --to codex --task "Fix the failing tests" --cd .
+npx task-delegate@latest targets
+npx task-delegate@latest delegate
 ```
 
-Available targets are discovered dynamically:
+## What v0.2 provides
 
-1. OpenCode
-2. Codex
-3. Claude Code
-4. Antigravity (`agy`)
-5. Kimi
-6. z.ai
-7. Grok
-8. Auto-select — coming soon
+- One CLI and one skill
+- Interactive or non-interactive delegation
+- Dynamic target availability checks
+- Manual review by default
+- Plan-only delegation mode
+- Clean-worktree protection
+- Normalized `task-delegate.result.v2` results
+- Per-run briefs, prompts, logs, changed-file lists, and diff statistics
+- Backward compatibility with the original `run --brief` interface
 
-Manual review is the default. Plan mode is supported. Auto-select and bounded automatic review remain roadmap items; v0.2 does not create recursive agent loops.
+TaskDelegate does **not** run an autonomous recursive agent loop. It does not commit, push, publish, or accept delegated changes automatically.
 
-Core architecture:
-
-- one skill
-- one CLI
-- one result contract: `task-delegate.result.v2`
-- one adapter registry
-- dynamic target discovery
-- no server, database, MCP requirement, or workflow engine
-- backend agents never commit or push
-
-## Why TaskDelegate exists
-
-Most orchestrator agents waste context when they try to inspect, implement, debug, and review everything inside one conversation. TaskDelegate moves implementation-heavy work into a separate CLI-agent run and returns only a compact result for review.
+## How it works
 
 ```text
-orchestrator agent
-→ compact brief
-→ backend adapter
-→ CLI coding agent
-→ result.json + logs + diff metadata
-→ orchestrator review
-→ human/orchestrator commit
+user or orchestrator
+  → bounded task
+  → target registry
+  → local CLI coding agent
+  → code changes + run artifacts
+  → result.json
+  → explicit human/orchestrator review
 ```
 
-## Current backend matrix
-
-| Backend | Status | Default mode | Recommended use |
-|---|---|---|---|
-| OpenCode | Stable | `safe-auto` | Mechanical edits, small features, tests, refactors |
-| Codex | Experimental | `manual` | Reasoning-heavy implementation or second pass |
-| Claude Code | Experimental | `manual` | Complex refactor, architecture-sensitive work, planning/review |
+The delegated agent receives hard rules that prohibit commits, pushes, history rewrites, credential access, writes outside the project, and unrelated changes.
 
 ## Requirements
 
-- Node.js 18+
+- Node.js `18.17.0` or later
 - Git
-- At least one supported CLI backend installed and authenticated:
-  - `opencode`
-  - `codex`
-  - `claude`
+- At least one supported target CLI installed and authenticated
 
-## Official repository
-
-```text
-https://github.com/MOHJRNL/task-delegate
-```
-
-## Installation
-
-### Prerequisites
-
-Before installing TaskDelegate, ensure you have:
-
-- **Node.js** 18.17.0 or later
-- **Git** installed and available in your PATH
-- At least one supported CLI backend installed and authenticated:
-  - `opencode` (recommended, stable)
-  - `codex` (experimental)
-  - `claude` (experimental)
-
-Verify your setup:
+Check the local environment:
 
 ```bash
-node --version  # Should be >=18.17.0
-git --version
-opencode --version  # or your chosen backend
-```
-
-### Option 1: Run as a CLI with npx (Recommended)
-
-The simplest way to use TaskDelegate is with npx, which requires no installation:
-
-```bash
-npx task-delegate@latest --help
 npx task-delegate@latest doctor
 npx task-delegate@latest targets
 ```
 
-For a specific version:
+`doctor` currently reports the three legacy adapter CLIs: OpenCode, Codex, and Claude Code. `targets` reports every v0.2 delegation target and whether its executable is available in `PATH`.
+
+## Installation
+
+### Run with npx
+
+No global installation is required:
 
 ```bash
-npx task-delegate@0.2.0 --help
+npx task-delegate@latest --help
+npx task-delegate@latest targets
+npx task-delegate@latest delegate
 ```
 
-### Option 2: Install as an Agent Skill
-
-If you use an agent framework that supports the `skills` CLI:
+Pin a release for reproducible use:
 
 ```bash
-npx skills add MOHJRNL/task-delegate@latest --skill task-delegate
+npx task-delegate@0.2.0 targets
 ```
 
-This copies the skill package including all adapters and scripts. No separate adapter installation is required.
-
-### Option 3: Global Installation
-
-For frequent use, install globally:
+### Install globally
 
 ```bash
 npm install -g task-delegate@latest
+
+task-delegate targets
+task-delegate delegate
 ```
 
-Then run directly:
+### Install as an agent skill
+
+Using the `skills` CLI:
 
 ```bash
-task-delegate --help
-task-delegate doctor
-task-delegate targets
+npx skills add MOHJRNL/task-delegate --skill task-delegate
 ```
 
-### Option 4: Install Skill from npm Package
-
-To copy the skill directly from the npm package into your agent project:
+Or copy the bundled skill from the npm package:
 
 ```bash
 npx task-delegate@latest install-skill --dest .claude/skills
 ```
 
-This installs:
+This creates:
 
 ```text
 .claude/skills/task-delegate/
 ├── SKILL.md
-├── scripts/
-└── references/
+├── commands/
+├── references/
+└── scripts/
 ```
 
-### Development Installation
+Backend CLIs are external prerequisites and are not installed by TaskDelegate.
 
-For local development:
+## Quick start
+
+Run inside a clean Git repository:
 
 ```bash
-# Clone the repository
-git clone https://github.com/MOHJRNL/task-delegate.git
-cd task-delegate
+cd /path/to/project
+npx task-delegate@latest delegate
+```
 
-# Run tests
+TaskDelegate will:
+
+1. Display available targets.
+2. Ask you to choose one.
+3. Ask for the task.
+4. Refuse a dirty worktree unless explicitly allowed.
+5. Run the selected CLI agent.
+6. Write a normalized result and supporting artifacts.
+7. Leave all changes uncommitted for review.
+
+Non-interactive example:
+
+```bash
+npx task-delegate@latest delegate \
+  --to opencode \
+  --task "Fix the failing tests and keep the change narrowly scoped" \
+  --cd .
+```
+
+Plan-only example:
+
+```bash
+npx task-delegate@latest delegate \
+  --to claude \
+  --mode plan \
+  --task "Review the authentication flow and propose a safe refactor" \
+  --cd .
+```
+
+## Delegation targets
+
+| Target | ID | Executable | Status | Notes |
+|---|---|---|---|---|
+| OpenCode | `opencode` | `opencode` | Stable | General implementation target |
+| Codex | `codex` | `codex` | Stable | Uses `codex exec` |
+| Claude Code | `claude` | `claude` | Stable | Uses print mode with explicit permission mode |
+| Antigravity | `agy` | `agy` | Experimental | Requires the `agy` CLI |
+| Kimi | `kimi` | `kimi` | Experimental | Requires the `kimi` CLI |
+| z.ai | `zai` | `opencode` | Stable | Reuses OpenCode with `zai-coding-plan/glm-4.7` by default |
+| Grok | `grok` | `grok` | Experimental | Requires the `grok` CLI |
+| Auto-select | `auto` | — | Coming soon | Not available in v0.2 |
+
+Availability means that the required executable was found in `PATH`. TaskDelegate does not currently verify backend authentication before dispatch.
+
+## Unified command reference
+
+### List targets
+
+```bash
+task-delegate targets
+task-delegate targets --json
+```
+
+### Delegate
+
+```bash
+task-delegate delegate [options]
+```
+
+Options:
+
+```text
+--to <opencode|codex|claude|agy|kimi|zai|grok>
+--task <text>
+--cd <path>
+--mode <manual|plan>
+--model <name>
+--timeout-ms <number>
+--allow-dirty
+--dry-run
+--json
+```
+
+`manual` is the default. `plan` prepends a no-edit planning instruction. Automatic target selection is not implemented.
+
+### Dry run
+
+A dry run creates the prompt and result artifacts without launching the target CLI:
+
+```bash
+task-delegate delegate \
+  --to opencode \
+  --task "Describe the intended change" \
+  --cd . \
+  --dry-run
+```
+
+## Run artifacts
+
+Each unified delegation writes to:
+
+```text
+.task-delegate/runs/<timestamp>-<target>/
+├── result.json
+├── brief.md
+├── prompt.md
+├── stdout.log
+├── stderr.log
+├── changed-files.txt
+└── diff-stat.txt
+```
+
+Add the run directory to the delegated project’s `.gitignore`:
+
+```bash
+echo ".task-delegate/" >> .gitignore
+```
+
+The normalized result uses:
+
+```json
+{
+  "schemaVersion": "task-delegate.result.v2",
+  "status": "completed",
+  "target": "opencode",
+  "mode": "manual",
+  "changedFiles": ["README.md"],
+  "reviewRequired": true,
+  "commitAllowed": false,
+  "nextActions": ["accept", "revise", "cross-review", "discard"]
+}
+```
+
+`nextActions` are review recommendations in v0.2; they are not yet executable TaskDelegate subcommands.
+
+## Safety boundaries
+
+TaskDelegate provides guardrails, not a security sandbox.
+
+- A clean worktree is required by default.
+- `--allow-dirty` must be explicit.
+- Delegated prompts prohibit commits and pushes.
+- Delegated prompts prohibit reading secrets and credentials.
+- Delegated prompts prohibit writes outside the selected project.
+- Runs use a bounded timeout; the default is 30 minutes.
+- All generated changes require review.
+- TaskDelegate never commits or publishes automatically.
+
+Before accepting a delegated result:
+
+```bash
+git status
+git diff
 npm test
-npm run check
-
-# Run the CLI locally
-node bin/task-delegate.mjs --help
-node bin/task-delegate.mjs doctor
 ```
 
-### Troubleshooting Installation
+Use checks appropriate to the delegated project.
 
-**Node.js version too old:**
+## Legacy brief workflow
 
-```bash
-# Install Node.js 18+ using nvm (recommended)
-nvm install 18
-nvm use 18
-```
-
-**Git not found:**
-
-Install Git from https://git-scm.com/downloads or via your system package manager.
-
-**Backend CLI not working:**
-
-Ensure your chosen backend CLI is installed and authenticated:
+The original v0.1-compatible interface remains available for advanced workflows:
 
 ```bash
-# For OpenCode
-opencode --version
+task-delegate init-brief --out task-delegate.brief.md
 
-# For Codex
-codex --version
-
-# For Claude Code
-claude --version
-```
-
-## What is bundled vs external
-
-Bundled:
-
-- `task-delegate` CLI
-- `task-delegate` skill
-- OpenCode/Codex/Claude adapters
-- brief templates
-- permission/review references
-
-External prerequisites:
-
-- Node.js
-- Git
-- whichever backend CLI the user wants to run: `opencode`, `codex`, or `claude`
-- backend authentication/configuration
-
-Adapters are wrappers. They are intentionally bundled. Backend CLIs are not bundled because they have their own installation, authentication, permissions, model access, and release cadence.
-
-## Quick start for local development
-
-```bash
-npm test
-npm run check
-npm run pack:dry-run
-```
-
-Run the CLI locally from the repo:
-
-```bash
-node bin/task-delegate.mjs --help
-node bin/task-delegate.mjs doctor
-node bin/task-delegate.mjs list-backends
-```
-
-Dry run without launching a backend:
-
-```bash
-npm run dry-run
-```
-
-Delegate to OpenCode:
-
-```bash
 task-delegate run \
   --backend opencode \
   --mode safe-auto \
-  --brief examples/brief.sample.md \
-  --cd /path/to/project
+  --brief task-delegate.brief.md \
+  --cd .
 ```
 
-Delegate to Codex manually:
-
-```bash
-task-delegate run \
-  --backend codex \
-  --mode manual \
-  --brief examples/brief.sample.md \
-  --cd /path/to/project
-```
-
-Delegate to Claude Code in plan mode:
-
-```bash
-task-delegate run \
-  --backend claude \
-  --mode plan \
-  --brief examples/brief.sample.md \
-  --cd /path/to/project
-```
-
-## Skill installation helper
-
-If a user wants to copy the skill directly from the npm package into a local agent project:
-
-```bash
-npx task-delegate install-skill --dest .claude/skills
-```
-
-This installs:
+Legacy commands:
 
 ```text
-.claude/skills/task-delegate/
-├── SKILL.md
-├── scripts/
-└── references/
+doctor
+list-backends
+skill-path
+install-skill
+init-brief
+run
 ```
 
-The adapter scripts are included. No separate adapter package is needed.
-
-## Publishing to npm
-
-TaskDelegate is npm-ready. The package exposes a CLI binary through the `bin` field:
-
-```json
-{
-  "bin": {
-    "task-delegate": "bin/task-delegate.mjs"
-  }
-}
-```
-
-Before the first public release:
-
-```bash
-npm login
-npm run prepublishOnly
-npm publish
-```
-
-If the unscoped package name `task-delegate` is unavailable, switch to a scoped package name, for example:
-
-```json
-{
-  "name": "@mohjrnl/task-delegate",
-  "bin": {
-    "task-delegate": "bin/task-delegate.mjs"
-  },
-  "publishConfig": {
-    "access": "public"
-  }
-}
-```
-
-Then users can run:
-
-```bash
-npx @mohjrnl/task-delegate --help
-```
-
-## Output
-
-Each run writes to:
-
-```text
-.task-delegate/runs/<timestamp>-<backend>/
-├── result.json
-├── stdout.log
-├── stderr.log
-├── prompt.md
-├── git-before.txt
-├── git-after.txt
-├── diff-stat.txt
-└── changed-files.txt
-```
-
-`result.json` is intentionally compact so the orchestrator does not need to load long logs into context.
-
-## Modes
-
-| Mode | Meaning |
-|---|---|
-| `plan` | Ask the backend to analyze and propose a plan only. |
-| `manual` | Run with conservative/manual permissions where supported. |
-| `safe-auto` | Allow non-interactive execution with guardrails. Stable only for OpenCode in v0.1. |
-
-## Safety model
-
-TaskDelegate does not claim to make CLI agents safe by itself. It creates a safer operating loop:
-
-- no commits by backend agents
-- dirty working tree preflight
-- deny rules for OpenCode via `OPENCODE_PERMISSION`
-- compact output instead of full transcript loading
-- explicit review required
-- destructive command warnings
+The legacy workflow supports OpenCode, Codex, and Claude adapters and writes the older `schemaVersion: "0.1"` result shape. New integrations should prefer `delegate` and `task-delegate.result.v2`.
 
 ## Troubleshooting
 
-### TaskDelegate requires a Git project
+### Dirty worktree refused
 
-TaskDelegate is designed to run inside a Git repository so it can capture:
+TaskDelegate protects existing uncommitted work:
 
-- Git status before and after the delegated run
-- changed files
-- diff stat
-- review metadata
+```text
+Dirty worktree refused. Commit/stash changes or use --allow-dirty.
+```
 
-For a new test project:
+Preferred resolution:
 
 ```bash
-git init
-echo ".task-delegate/" >> .gitignore
+git status
 git add .
-git commit -m "Initial project"
+git commit -m "Checkpoint before delegation"
 ```
 
-The `.task-delegate/` directory contains run outputs and should normally be ignored.
+Use `--allow-dirty` only when you intentionally accept mixed pre-existing and delegated changes.
 
-### OpenCode fails with `Unexpected server error`
+### Target is not available
 
-First test OpenCode directly:
+Check the target executable:
 
 ```bash
-opencode run --pure --print-logs --log-level DEBUG "Say hello and do not edit files."
+opencode --version
+codex --version
+claude --version
+agy --version
+kimi --version
+grok --version
 ```
 
-If the logs show `ProviderModelNotFoundError`, your default OpenCode model is invalid or no longer available.
+Then authenticate using that target’s own CLI instructions.
+
+### OpenCode model error
 
 List available models:
 
@@ -418,42 +334,71 @@ List available models:
 opencode models
 ```
 
-Then pass a valid model explicitly:
+Pass a valid model explicitly:
 
 ```bash
-npx github:MOHJRNL/task-delegate run \
-  --backend opencode \
-  --mode safe-auto \
-  --brief brief.md \
-  --cd . \
-  --model zai-coding-plan/glm-4.7
+task-delegate delegate \
+  --to opencode \
+  --model <provider/model> \
+  --task "Fix the requested issue" \
+  --cd .
 ```
-
-The `--model` flag is optional, but useful when the default OpenCode model is not configured correctly.
-
-### Payment method errors
-
-Some OpenCode-hosted models may require billing. If you see a `No payment method` error, choose another available model or configure billing in OpenCode.
 
 ### Duplicate skill warning
 
-If TaskDelegate is installed both globally and for Claude Code, OpenCode may warn about duplicate skill names, for example:
+A duplicate skill warning usually means TaskDelegate is installed in more than one agent skill directory. Remove the unwanted duplicate or keep a single canonical installation.
 
-```text
-duplicate skill name task-delegate
+## Development
+
+```bash
+git clone https://github.com/MOHJRNL/task-delegate.git
+cd task-delegate
+
+npm run check
+npm test
+npm run pack:dry-run
+node bin/task-delegate.mjs targets
 ```
 
-This is usually harmless. It means the same skill exists in more than one skill location, such as:
+The project intentionally has no runtime dependencies.
 
-```text
-~/.agents/skills/task-delegate
-~/.claude/skills/task-delegate
+## Versioning and releases
+
+- npm package: `task-delegate`
+- GitHub repository: `MOHJRNL/task-delegate`
+- Current stable release line: `0.2.x`
+
+Release validation is enforced by `prepublishOnly`:
+
+```bash
+npm run check
+npm test
+npm run pack:dry-run
 ```
 
-## Attribution and forks
+## Current limitations
 
-TaskDelegate uses Apache-2.0 with a `NOTICE` file. Forks and redistributed derivative packages should preserve the license and NOTICE attribution. GitHub forks will also show the upstream relationship automatically when created through GitHub.
+- No automatic target selection
+- No executable accept, revise, cross-review, or discard commands
+- No authentication verification in target discovery
+- No live interactive relay after dispatch
+- No streaming normalized event protocol
+- `doctor` and the legacy adapter registry cover only OpenCode, Codex, and Claude
+- The unified and legacy workflows currently use different result schemas
 
 ## Roadmap
 
+Planned improvements include:
+
+- Explicit review commands
+- Authentication-aware target diagnostics
+- Unified doctor and target registries
+- Optional live streaming and interactive delegation
+- Bounded automatic target selection
+- One result schema across unified and legacy workflows
+
 See [`skills/task-delegate/references/roadmap.md`](skills/task-delegate/references/roadmap.md).
+
+## License
+
+Apache-2.0. Preserve [`NOTICE`](NOTICE) when redistributing modified versions.
