@@ -88,39 +88,129 @@ https://github.com/MOHJRNL/task-delegate
 
 ## Installation
 
-TaskDelegate supports two public usage paths.
+### Prerequisites
 
-### 1. Install as an Agent Skill
+Before installing TaskDelegate, ensure you have:
 
-Install the skill from this GitHub repository:
+- **Node.js** 18.17.0 or later
+- **Git** installed and available in your PATH
+- At least one supported CLI backend installed and authenticated:
+  - `opencode` (recommended, stable)
+  - `codex` (experimental)
+  - `claude` (experimental)
+
+Verify your setup:
 
 ```bash
-npx skills add MOHJRNL/task-delegate --skill task-delegate
+node --version  # Should be >=18.17.0
+git --version
+opencode --version  # or your chosen backend
 ```
 
-This copies the `skills/task-delegate` package, including scripts, references, and adapters. No separate adapter install is required.
+### Option 1: Run as a CLI with npx (Recommended)
 
-### 2. Run as a CLI with npx
-
-Before npm publishing, run directly from GitHub:
+The simplest way to use TaskDelegate is with npx, which requires no installation:
 
 ```bash
-npx github:MOHJRNL/task-delegate --help
-npx github:MOHJRNL/task-delegate doctor
+npx task-delegate@latest --help
+npx task-delegate@latest doctor
+npx task-delegate@latest targets
 ```
 
-After publishing to npm, users can run without a global install:
+For a specific version:
 
 ```bash
-npx task-delegate --help
-npx task-delegate doctor
-npx task-delegate run --backend opencode --mode safe-auto --brief brief.md --cd .
+npx task-delegate@0.2.0 --help
 ```
 
-Recommended pinned usage after release:
+### Option 2: Install as an Agent Skill
+
+If you use an agent framework that supports the `skills` CLI:
 
 ```bash
-npx task-delegate@0.1.0 --help
+npx skills add MOHJRNL/task-delegate@latest --skill task-delegate
+```
+
+This copies the skill package including all adapters and scripts. No separate adapter installation is required.
+
+### Option 3: Global Installation
+
+For frequent use, install globally:
+
+```bash
+npm install -g task-delegate@latest
+```
+
+Then run directly:
+
+```bash
+task-delegate --help
+task-delegate doctor
+task-delegate targets
+```
+
+### Option 4: Install Skill from npm Package
+
+To copy the skill directly from the npm package into your agent project:
+
+```bash
+npx task-delegate@latest install-skill --dest .claude/skills
+```
+
+This installs:
+
+```text
+.claude/skills/task-delegate/
+├── SKILL.md
+├── scripts/
+└── references/
+```
+
+### Development Installation
+
+For local development:
+
+```bash
+# Clone the repository
+git clone https://github.com/MOHJRNL/task-delegate.git
+cd task-delegate
+
+# Run tests
+npm test
+npm run check
+
+# Run the CLI locally
+node bin/task-delegate.mjs --help
+node bin/task-delegate.mjs doctor
+```
+
+### Troubleshooting Installation
+
+**Node.js version too old:**
+
+```bash
+# Install Node.js 18+ using nvm (recommended)
+nvm install 18
+nvm use 18
+```
+
+**Git not found:**
+
+Install Git from https://git-scm.com/downloads or via your system package manager.
+
+**Backend CLI not working:**
+
+Ensure your chosen backend CLI is installed and authenticated:
+
+```bash
+# For OpenCode
+opencode --version
+
+# For Codex
+codex --version
+
+# For Claude Code
+claude --version
 ```
 
 ## What is bundled vs external
