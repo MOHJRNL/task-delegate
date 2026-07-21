@@ -1,12 +1,29 @@
 ---
-description: Delegate a bounded task to an available CLI coding agent.
+description: Delegate a bounded task to another coding CLI
 ---
 
-Use the TaskDelegate skill and run `task-delegate delegate` from the current project.
+Start immediately by running:
 
-Rules:
-- Show available targets when no target is specified.
-- Manual review is the default.
-- Do not commit or push delegated changes.
-- Review `result.json`, changed files, and verification output before presenting the result.
-- Automatic routing and recursive delegation are not enabled in v0.2.
+```bash
+task-delegate targets --json
+```
+
+Present this exact target order:
+
+1. OpenCode
+2. Codex
+3. Claude
+4. Kimi
+5. z.ai
+6. Grok
+7. Antigravity
+
+Ask the user to choose a target, then ask for the task if it was not already provided. Confirm the current project directory and manual-review mode, then execute:
+
+```bash
+task-delegate delegate --to <target> --task "<task>" --cd "<project>"
+```
+
+After completion, summarize the result, changed files, verification, and the options to review, revise, cross-review, or discard. Never commit or push automatically.
+
+Antigravity is currently an interactive origin host, not a verified headless delegation target. If selected as the target, explain this and request another headless target.

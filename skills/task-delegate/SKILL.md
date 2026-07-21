@@ -22,6 +22,30 @@ task-delegate delegate --to codex --task "Fix the failing tests" --cd .
 
 When no target is supplied, show the available target list and ask the user to choose.
 
+
+## Interactive host flow
+
+When invoked without both a target and a task, start this flow immediately:
+
+1. Run `task-delegate targets --json`.
+2. Present the targets in this exact order:
+   1. OpenCode
+   2. Codex
+   3. Claude
+   4. Kimi
+   5. z.ai
+   6. Grok
+   7. Antigravity
+3. Ask the user to choose one target.
+4. Ask for the task if it was not already supplied.
+5. Show the current project directory and manual-review mode.
+6. Delegate with `task-delegate delegate --to <target> --task <task> --cd <project>`.
+7. Return a concise completion summary, changed files, verification status, and review options.
+
+Do not run bare `task-delegate delegate` before target discovery. Do not silently choose a target. Never commit or push automatically.
+
+Antigravity is available as an interactive origin host. Until a stable headless Antigravity execution interface is verified, selecting Antigravity as a target must explain that limitation and ask the user to choose another headless target.
+
 ## Targets
 
 - OpenCode
