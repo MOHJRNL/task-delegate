@@ -156,6 +156,15 @@ function normalizeInvocation(target, invocation, projectDir) {
   return { ...invocation, args };
 }
 
+async function gitHead(projectDir) {
+  const proc = await runProcess('git', ['rev-parse', 'HEAD'], {
+    cwd: projectDir,
+    env: process.env,
+    timeoutMs: 10_000
+  });
+  return proc.exitCode === 0 ? proc.stdout.trim() : null;
+}
+
 function isTransientFailure(proc) {
   return proc.timedOut || proc.exitCode === 127;
 }
@@ -195,6 +204,7 @@ export async function delegate(argv) {
   const gitRepo = await isGitRepo(projectDir);
   const statusBefore = gitRepo ? await statusPorcelain(projectDir) : '';
   const dirtyBefore = Boolean(statusBefore.trim());
+  const headBefore = gitRepo ? await gitHead(projectDir) : null;
   const runDir = path.join(projectDir, '.task-delegate', 'runs', `${safeTimestamp()}-${target.id}`);
   await ensureDir(runDir);
   if (dirtyBefore && !options.allowDirty) {
@@ -243,14 +253,16 @@ export async function delegate(argv) {
   const files = gitRepo ? await changedFiles(projectDir) : [];
   const stat = gitRepo ? await diffStat(projectDir) : '';
   const dirtyAfter = gitRepo ? await dirty(projectDir) : false;
+  const headAfter = gitRepo ? await gitHead(projectDir) : null;
+  const commitCreated = Boolean(gitRepo && headBefore && headAfter && headBefore !== headAfter);
   await writeText(path.join(runDir, 'changed-files.txt'), `${files.join('\n')}${files.length ? '\n' : ''}`);
   await writeText(path.join(runDir, 'diff-stat.txt'), stat);
 
   const result = {
     schemaVersion: 'task-delegate.result.v2',
     taskId: path.basename(runDir),
-    status: proc.exitCode === 0 ? 'completed' : 'failed',
-    reason: proc.timedOut ? 'timeout' : proc.exitCode === 127 ? 'launch-failure' : undefined,
+    status: proc.exitCode === 0 && !commitCreated ? 'completed' : 'failed',
+    reason: commitCreated ? 'commit-created' : proc.timedOut ? 'timeout' : proc.exitCode === 127 ? 'launch-failure' : undefined,
     target: target.id,
     targetName: target.name,
     mode: options.mode,
@@ -264,7 +276,7 @@ export async function delegate(argv) {
     projectDir,
     runDir,
     changedFiles: files,
-    git: { isGitRepo: gitRepo, dirtyBefore, dirtyAfter },
+    git: { isGitRepo: gitRepo, dirtyBefore, dirtyAfter, headBefore, headAfter, commitCreated },
     artifacts: {
       brief: path.join(runDir, 'brief.md'),
       prompt: path.join(runDir, 'prompt.md'),
@@ -281,7 +293,7 @@ export async function delegate(argv) {
 
   if (machineOutput) console.log(JSON.stringify(result, null, 2));
   else printHumanResult(result);
-  process.exitCode = proc.exitCode === 0 ? 0 : 1;
+  process.exitCode = result.status === 'completed' ? 0 : 1;
   return result;
 }
 
