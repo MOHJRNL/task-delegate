@@ -109,6 +109,46 @@ async function readTaskInteractively() {
   }
 }
 
+
+function normalizeInvocation(target, invocation, projectDir) {
+  const args = [...(invocation.args || [])];
+
+  const removeOption = (...names) => {
+    for (let index = args.length - 1; index >= 0; index -= 1) {
+      if (names.includes(args[index])) args.splice(index, 2);
+    }
+  };
+
+  if (target.id === 'opencode' || target.id === 'zai') {
+    removeOption('--dir');
+    args.push('--dir', projectDir);
+  }
+
+  if (target.id === 'codex') {
+    removeOption('--sandbox', '-s');
+    const execIndex = args.indexOf('exec');
+    args.splice(execIndex >= 0 ? execIndex + 1 : 0, 0, '--sandbox', 'workspace-write');
+  }
+
+  if (target.id === 'claude') {
+    removeOption('--permission-mode');
+    args.push('--permission-mode', 'acceptEdits');
+  }
+
+  if (target.id === 'kimi') {
+    for (let index = 0; index < args.length; index += 1) {
+      if (args[index] === '--print') args[index] = '--prompt';
+    }
+  }
+
+  if (target.id === 'grok') {
+    removeOption('--directory', '-d');
+    args.push('--directory', projectDir);
+  }
+
+  return { ...invocation, args };
+}
+
 export async function delegate(argv) {
   const options = parseOptions(argv);
   if (options.help) {
@@ -140,7 +180,13 @@ export async function delegate(argv) {
   const prompt = buildPrompt(task, target);
   await writeText(path.join(runDir, 'brief.md'), `${task.trim()}\n`);
   await writeText(path.join(runDir, 'prompt.md'), prompt);
-  const invocation = buildInvocation(target, { prompt, mode: options.mode, model: options.model });
+  const rawInvocation = buildInvocation(target, {
+    prompt,
+    mode: options.mode,
+    model: options.model,
+    projectDir
+  });
+  const invocation = normalizeInvocation(target, rawInvocation, projectDir);
   const startedAt = nowIso();
   const started = Date.now();
   const proc = options.dryRun

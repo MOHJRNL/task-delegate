@@ -49,7 +49,7 @@ export function buildInvocation(target, { prompt, mode = 'manual', model }) {
     case 'agy':
       return { command: 'agy', args: ['run', effectivePrompt], env: {} };
     case 'kimi':
-      return { command: 'kimi', args: ['--print', effectivePrompt], env: {} };
+      return { command: 'kimi', args: ['--prompt', effectivePrompt], env: {} };
     case 'grok':
       return { command: 'grok', args: ['-p', effectivePrompt], env: {} };
     default:

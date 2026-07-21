@@ -24,7 +24,10 @@ export async function diffStat(cwd) {
 }
 
 export async function changedFiles(cwd) {
-  const result = await git(cwd, ['diff', '--name-only']);
+  const result = await git(cwd, ['status', '--porcelain']);
   if (result.exitCode !== 0) return [];
-  return result.stdout.split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
+  return result.stdout
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.includes('.task-delegate/'));
 }

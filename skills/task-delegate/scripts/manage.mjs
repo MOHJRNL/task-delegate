@@ -46,6 +46,12 @@ export async function verify({ live = false, targetId = null } = {}) {
   for (const target of selected) {
     const detected = await commandExists(target.binary);
     const item = { target: target.id, binary: target.binary, detected, live: false };
+    if (target.id === 'agy') {
+      item.status = 'manual-host-only';
+      item.note = 'Antigravity currently exposes an interactive TUI and is not used as a headless verification target.';
+      report.push(item);
+      continue;
+    }
     if (!detected) { item.status = 'failed'; item.reason = 'binary-not-detected'; report.push(item); continue; }
     if (!live) { item.status = 'ready-for-live-verification'; report.push(item); continue; }
     const dir = await mkdtemp(path.join(os.tmpdir(), `task-delegate-${target.id}-`));
@@ -57,7 +63,10 @@ export async function verify({ live = false, targetId = null } = {}) {
       const result = await run('task-delegate', ['delegate', '--to', target.id, '--task', task, '--cd', dir], { cwd: dir });
       const after = (await git(dir, 'rev-parse', 'HEAD')).stdout.trim();
       const content = await readFile(path.join(dir, 'hello.txt'), 'utf8').catch(() => null);
-      const status = (await git(dir, 'status', '--porcelain')).stdout.trim().split('\n').filter(Boolean);
+      const status = (await git(dir, 'status', '--porcelain')).stdout
+        .trim()
+        .split('\n')
+        .filter(line => line && !line.includes('.task-delegate/'));
       const runRoot = path.join(dir, '.task-delegate', 'runs');
       const findResult = await run('sh', ['-lc', `find ${JSON.stringify(runRoot)} -name result.json -type f | sort | tail -1`]);
       const resultPath = findResult.stdout.trim();
