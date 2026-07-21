@@ -1,6 +1,6 @@
 {
   "name": "task-delegate",
-  "version": "0.2.1",
+  "version": "2.1.0",
   "description": "One portable delegation interface for discovering and dispatching bounded tasks to CLI coding agents with manual review and normalized results.",
   "type": "module",
   "bin": {
@@ -17,7 +17,10 @@
     "list-backends": "node bin/task-delegate.mjs list-backends",
     "init-brief": "node bin/task-delegate.mjs init-brief --out task-delegate.brief.md --force",
     "targets": "node bin/task-delegate.mjs targets",
-    "delegate:dry-run": "node bin/task-delegate.mjs delegate --to opencode --task \"Dry-run delegation\" --cd . --dry-run --allow-dirty"
+    "delegate:dry-run": "node bin/task-delegate.mjs delegate --to opencode --task \"Dry-run delegation\" --cd . --dry-run --allow-dirty",
+    "verify": "node skills/task-delegate/scripts/manage.mjs verify",
+    "verify:live": "node skills/task-delegate/scripts/manage.mjs verify --live",
+    "setup": "node skills/task-delegate/scripts/manage.mjs setup"
   },
   "keywords": [
     "agent-skills",

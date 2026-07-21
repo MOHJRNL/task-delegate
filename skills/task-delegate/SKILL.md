@@ -3,7 +3,7 @@ name: task-delegate
 description: Use TaskDelegate to hand off bounded implementation work to an available CLI coding agent through one portable interface. Discover OpenCode, Codex, Claude Code, Antigravity, Kimi, z.ai, and Grok targets, run manual delegation by default, receive one normalized result contract, and keep review and commit responsibility with the originating agent or user. Auto-select and bounded automatic review are roadmap features, not active recursive loops.
 license: Apache-2.0
 metadata:
-  version: "0.2.1"
+  version: "2.1.0"
   default_mode: manual
   result_contract: task-delegate.result.v2
 ---
