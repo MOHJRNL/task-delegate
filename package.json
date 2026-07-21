@@ -7,7 +7,7 @@
     "task-delegate": "bin/task-delegate.mjs"
   },
   "scripts": {
-    "check": "node --check skills/task-delegate/scripts/relay.mjs && find skills/task-delegate/scripts -name '*.mjs' -not -path '*/node_modules/*' -print0 | xargs -0 -n1 node --check",
+    "check": "node scripts/check-syntax.mjs",
     "test": "node --test test/*.test.mjs",
     "dry-run": "node bin/task-delegate.mjs run --backend opencode --mode plan --brief examples/brief.sample.md --cd . --dry-run --allow-dirty",
     "start": "node bin/task-delegate.mjs --help",
@@ -41,7 +41,6 @@
     "node": ">=18.17.0"
   },
   "devDependencies": {},
-  "main": "bin/task-delegate.mjs",
   "files": [
     "bin/",
     "skills/",
@@ -52,8 +51,7 @@
     "skills.sh.json",
     "PUBLISHING.md",
     "NOTICE",
-    "scripts/",
-    "GITHUB_PROFILE_SETUP.md"
+    "scripts/check-syntax.mjs"
   ],
   "repository": {
     "type": "git",
@@ -67,9 +65,7 @@
     "access": "public"
   },
   "exports": {
-    ".": "./bin/task-delegate.mjs",
     "./skill": "./skills/task-delegate/SKILL.md",
-    "./relay": "./skills/task-delegate/scripts/relay.mjs",
     "./package.json": "./package.json"
   },
   "author": "Noah Hendy"
