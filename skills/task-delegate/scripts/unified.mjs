@@ -151,8 +151,14 @@ function normalizeInvocation(target, invocation, projectDir) {
   }
 
   if (target.id === 'grok') {
-    removeOption('--directory', '-d');
-    args.push('--directory', projectDir);
+    removeOption('--directory', '-d', '--cwd');
+    removeOption('--permission-mode');
+
+    if (!args.includes('--always-approve')) {
+      args.unshift('--always-approve');
+    }
+
+    args.unshift('--cwd', projectDir);
   }
 
   return { ...invocation, args };

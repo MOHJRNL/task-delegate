@@ -51,7 +51,7 @@ export function buildInvocation(target, { prompt, mode = 'manual', model }) {
     case 'kimi':
       return { command: 'kimi', args: ['--prompt', effectivePrompt], env: {} };
     case 'grok':
-      return { command: 'grok', args: ['-p', effectivePrompt], env: {} };
+      return { command: 'grok', args: ['--single', effectivePrompt], env: {} };
     default:
       throw new Error(`Unsupported delegation target: ${target.id}`);
   }

@@ -5,7 +5,7 @@ export const TARGETS = [
   { id: 'agy', name: 'Antigravity', binary: 'agy', args: p => ['run', p] },
   { id: 'kimi', name: 'Kimi', binary: 'kimi', args: p => ['--prompt', p] },
   { id: 'zai', name: 'z.ai through OpenCode', binary: 'opencode', args: p => ['run', '--format', 'json', '--agent', 'build', '--model', 'zai-coding-plan/glm-4.7', p] },
-  { id: 'grok', name: 'Grok', binary: 'grok', args: p => ['-p', p] }
+  { id: 'grok', name: 'Grok', binary: 'grok', args: p => ['--single', p] }
 ];
 
 export function getTarget(id) { return TARGETS.find(t => t.id === id); }
