@@ -124,7 +124,8 @@ export function runProcess(command, args, options = {}) {
     cwd = process.cwd(),
     env = process.env,
     timeoutMs = 30 * 60 * 1000,
-    stdin = undefined
+    stdin = undefined,
+    maxOutputBytes = 5 * 1024 * 1024
   } = options;
 
   return new Promise((resolve) => {
@@ -136,9 +137,23 @@ export function runProcess(command, args, options = {}) {
       detached: process.platform !== 'win32'
     });
 
-    let stdout = '';
-    let stderr = '';
+    const stdoutChunks = [];
+    const stderrChunks = [];
+    let stdoutBytes = 0;
+    let stderrBytes = 0;
+    let stdoutTruncated = false;
+    let stderrTruncated = false;
     let timedOut = false;
+
+    const capture = (chunk, chunks, currentBytes, markTruncated) => {
+      const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      const remaining = Math.max(0, maxOutputBytes - currentBytes);
+      if (remaining > 0) chunks.push(buffer.subarray(0, remaining));
+      if (buffer.length > remaining) markTruncated();
+      return currentBytes + Math.min(buffer.length, remaining);
+    };
+
+    const capturedText = chunks => Buffer.concat(chunks).toString('utf8');
 
     const terminateTree = (signal) => {
       if (!child.pid) return;
@@ -167,15 +182,42 @@ export function runProcess(command, args, options = {}) {
       setTimeout(() => terminateTree('SIGKILL'), 3000).unref();
     }, timeoutMs);
 
-    child.stdout.on('data', (chunk) => { stdout += chunk.toString(); });
-    child.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
+    child.stdout.on('data', (chunk) => {
+      stdoutBytes = capture(chunk, stdoutChunks, stdoutBytes, () => { stdoutTruncated = true; });
+    });
+    child.stderr.on('data', (chunk) => {
+      stderrBytes = capture(chunk, stderrChunks, stderrBytes, () => { stderrTruncated = true; });
+    });
     child.on('error', (error) => {
       clearTimeout(timer);
-      resolve({ command, args, cwd, exitCode: 127, stdout, stderr: `${stderr}\n${error.message}`, timedOut });
+      const stdout = capturedText(stdoutChunks);
+      const capturedStderr = capturedText(stderrChunks);
+      const stderr = `${capturedStderr}${capturedStderr ? '\n' : ''}${error.message}`;
+      resolve({
+        command,
+        args,
+        cwd,
+        exitCode: 127,
+        stdout,
+        stderr,
+        timedOut,
+        stdoutTruncated,
+        stderrTruncated
+      });
     });
     child.on('close', (exitCode) => {
       clearTimeout(timer);
-      resolve({ command, args, cwd, exitCode, stdout, stderr, timedOut });
+      resolve({
+        command,
+        args,
+        cwd,
+        exitCode,
+        stdout: capturedText(stdoutChunks),
+        stderr: capturedText(stderrChunks),
+        timedOut,
+        stdoutTruncated,
+        stderrTruncated
+      });
     });
 
     if (stdin) child.stdin.write(stdin);

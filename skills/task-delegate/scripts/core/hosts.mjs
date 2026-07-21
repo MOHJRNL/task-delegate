@@ -1,6 +1,6 @@
 import os from 'node:os';
 import path from 'node:path';
-import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, lstat, mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
@@ -9,6 +9,40 @@ const home = () => process.env.TASK_DELEGATE_HOME || os.homedir();
 const skillSource = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 const installPath = relativePath => path.join(home(), relativePath, 'task-delegate');
+
+function isWithin(parent, child) {
+  const relative = path.relative(parent, child);
+  return relative !== '' && !relative.startsWith('..') && !path.isAbsolute(relative);
+}
+
+async function assertSafeDestination(destination, { createParent = false } = {}) {
+  const configuredHome = path.resolve(home());
+  if (configuredHome === path.parse(configuredHome).root) {
+    throw new Error(`Refusing unsafe TaskDelegate home: ${configuredHome}`);
+  }
+
+  if (createParent) {
+    await mkdir(configuredHome, { recursive: true });
+    await mkdir(path.dirname(destination), { recursive: true });
+  }
+
+  const canonicalHome = await realpath(configuredHome);
+  const canonicalParent = await realpath(path.dirname(destination));
+  const resolvedDestination = path.resolve(destination);
+
+  if (!isWithin(canonicalHome, canonicalParent) || !isWithin(configuredHome, resolvedDestination)) {
+    throw new Error(`Refusing install path outside TaskDelegate home: ${destination}`);
+  }
+
+  try {
+    const info = await lstat(destination);
+    if (info.isSymbolicLink()) {
+      throw new Error(`Refusing symlinked skill destination: ${destination}`);
+    }
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error;
+  }
+}
 
 export const HOSTS = [
   {
@@ -158,7 +192,7 @@ export async function installHosts({ dryRun = false, check = false } = {}) {
     }
 
     if (!copiedDestinations.has(destination)) {
-      await mkdir(path.dirname(destination), { recursive: true });
+      await assertSafeDestination(destination, { createParent: true });
       await rm(destination, { recursive: true, force: true });
       await cp(skillSource, destination, { recursive: true });
       copiedDestinations.add(destination);
@@ -191,6 +225,7 @@ export async function uninstallHosts() {
 
   const results = [];
   for (const destination of destinations) {
+    await assertSafeDestination(destination);
     await rm(destination, { recursive: true, force: true });
     results.push({ path: destination, status: 'removed' });
   }

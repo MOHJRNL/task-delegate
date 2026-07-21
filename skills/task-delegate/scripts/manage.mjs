@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 import os from 'node:os';
 import path from 'node:path';
-import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
-import { spawn } from 'node:child_process';
+import { mkdtemp, writeFile, readFile, readdir, rm } from 'node:fs/promises';
 import { stdout as output, stderr as errorOutput } from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { HOSTS, installHosts, uninstallHosts, commandExists } from './core/hosts.mjs';
 import { TARGETS } from './core/targets.mjs';
 import { validateResultV2 } from './core/schema.mjs';
+import { runProcess } from './lib/utils.mjs';
 
 const localCliPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../bin/task-delegate.mjs');
 const DEFAULT_VERIFY_TIMEOUT_MS = 180_000;
@@ -20,26 +20,21 @@ function parseInteger(value, flag, min) {
 }
 
 function run(command, args, options = {}) {
-  const timeoutMs = options.timeoutMs ?? 0;
-  return new Promise(resolve => {
-    const p = spawn(command, args, { ...options, timeoutMs: undefined, stdio: ['ignore', 'pipe', 'pipe'] });
-    let stdout = '', stderr = '', timedOut = false, settled = false;
-    const finish = (result) => {
-      if (settled) return;
-      settled = true;
-      if (timer) clearTimeout(timer);
-      resolve(result);
-    };
-    const timer = timeoutMs > 0 ? setTimeout(() => {
-      timedOut = true;
-      p.kill('SIGTERM');
-      setTimeout(() => p.kill('SIGKILL'), 3000).unref();
-    }, timeoutMs) : null;
-    p.stdout.on('data', d => stdout += d);
-    p.stderr.on('data', d => stderr += d);
-    p.on('error', e => finish({ exitCode: 127, stdout, stderr: `${stderr}${e.message}`, timedOut }));
-    p.on('close', c => finish({ exitCode: c ?? 1, stdout, stderr, timedOut }));
+  return runProcess(command, args, {
+    cwd: options.cwd,
+    env: options.env || process.env,
+    timeoutMs: options.timeoutMs ?? 0
   });
+}
+
+async function latestResultPath(runRoot) {
+  const entries = await readdir(runRoot, { withFileTypes: true }).catch(() => []);
+  const directories = entries
+    .filter(entry => entry.isDirectory())
+    .map(entry => entry.name)
+    .sort();
+  const latest = directories.at(-1);
+  return latest ? path.join(runRoot, latest, 'result.json') : '';
 }
 
 async function git(cwd, ...args) { return run('git', args, { cwd, timeoutMs: 10_000 }); }
@@ -95,8 +90,7 @@ async function verifyTarget(target, { live, timeoutMs, machineOutput, index, tot
     const content = await readFile(path.join(dir, 'hello.txt'), 'utf8').catch(() => null);
     const status = (await git(dir, 'status', '--porcelain')).stdout.trim().split('\n').filter(line => line && !line.includes('.task-delegate/'));
     const runRoot = path.join(dir, '.task-delegate', 'runs');
-    const findResult = await run('sh', ['-lc', `find ${JSON.stringify(runRoot)} -name result.json -type f | sort | tail -1`], { timeoutMs: 10_000 });
-    const resultPath = findResult.stdout.trim();
+    const resultPath = await latestResultPath(runRoot);
     const parsed = resultPath ? JSON.parse(await readFile(resultPath, 'utf8')) : null;
     const schema = validateResultV2(parsed);
     const exactContent = typeof content === 'string' && content.replace(/\r?\n$/, '') === 'TaskDelegate smoke test';

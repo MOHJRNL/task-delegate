@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import path from 'node:path';
 import readline from 'node:readline/promises';
+import { lstat, realpath } from 'node:fs/promises';
 import { stdin as input, stdout as output, stderr as errorOutput } from 'node:process';
 import { fileURLToPath } from 'node:url';
 
@@ -156,6 +157,40 @@ function normalizeInvocation(target, invocation, projectDir) {
   return { ...invocation, args };
 }
 
+async function canonicalProjectDir(inputPath) {
+  const resolved = path.resolve(inputPath);
+  if (!(await exists(resolved))) throw new Error(`Project directory does not exist: ${resolved}`);
+  const canonical = await realpath(resolved);
+  const info = await lstat(canonical);
+  if (!info.isDirectory()) throw new Error(`Project path is not a directory: ${canonical}`);
+  return canonical;
+}
+
+async function assertSafeRunPath(projectDir) {
+  const components = [
+    path.join(projectDir, '.task-delegate'),
+    path.join(projectDir, '.task-delegate', 'runs')
+  ];
+
+  for (const component of components) {
+    try {
+      const info = await lstat(component);
+      if (info.isSymbolicLink()) {
+        throw new Error(`Refusing symlinked TaskDelegate run path: ${component}`);
+      }
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error;
+    }
+  }
+}
+
+function parseStatusFiles(status) {
+  return status
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(line => line && !line.includes('.task-delegate/'));
+}
+
 async function gitHead(projectDir) {
   const proc = await runProcess('git', ['rev-parse', 'HEAD'], {
     cwd: projectDir,
@@ -191,8 +226,8 @@ export async function delegate(argv) {
   }
   if (!['manual', 'plan'].includes(options.mode)) throw new Error("Only 'manual' and 'plan' are supported in v2.1. Automatic mode is coming soon.");
 
-  const projectDir = path.resolve(options.cd);
-  if (!(await exists(projectDir))) throw new Error(`Project directory does not exist: ${projectDir}`);
+  const projectDir = await canonicalProjectDir(options.cd);
+  await assertSafeRunPath(projectDir);
   const targets = await discoverTargets();
   let target = options.to ? getTarget(options.to.toLowerCase()) : undefined;
   if (options.to && !target) throw new Error(`Unknown target: ${options.to}`);
@@ -204,6 +239,7 @@ export async function delegate(argv) {
   const gitRepo = await isGitRepo(projectDir);
   const statusBefore = gitRepo ? await statusPorcelain(projectDir) : '';
   const dirtyBefore = Boolean(statusBefore.trim());
+  const preExistingChangedFiles = gitRepo ? parseStatusFiles(statusBefore) : [];
   const headBefore = gitRepo ? await gitHead(projectDir) : null;
   const runDir = path.join(projectDir, '.task-delegate', 'runs', `${safeTimestamp()}-${target.id}`);
   await ensureDir(runDir);
@@ -255,6 +291,12 @@ export async function delegate(argv) {
   const dirtyAfter = gitRepo ? await dirty(projectDir) : false;
   const headAfter = gitRepo ? await gitHead(projectDir) : null;
   const commitCreated = Boolean(gitRepo && headBefore && headAfter && headBefore !== headAfter);
+  const preExistingSet = new Set(preExistingChangedFiles);
+  const newlyChangedFiles = files.filter(file => !preExistingSet.has(file));
+  const possiblyModifiedPreExistingFiles = options.allowDirty
+    ? files.filter(file => preExistingSet.has(file))
+    : [];
+
   await writeText(path.join(runDir, 'changed-files.txt'), `${files.join('\n')}${files.length ? '\n' : ''}`);
   await writeText(path.join(runDir, 'diff-stat.txt'), stat);
 
@@ -276,7 +318,17 @@ export async function delegate(argv) {
     projectDir,
     runDir,
     changedFiles: files,
+    changeAttribution: {
+      preExistingChangedFiles,
+      newlyChangedFiles,
+      possiblyModifiedPreExistingFiles,
+      attributionCertain: !options.allowDirty || possiblyModifiedPreExistingFiles.length === 0
+    },
     git: { isGitRepo: gitRepo, dirtyBefore, dirtyAfter, headBefore, headAfter, commitCreated },
+    output: {
+      stdoutTruncated: Boolean(proc.stdoutTruncated),
+      stderrTruncated: Boolean(proc.stderrTruncated)
+    },
     artifacts: {
       brief: path.join(runDir, 'brief.md'),
       prompt: path.join(runDir, 'prompt.md'),
