@@ -158,10 +158,22 @@ export async function verify({ live = false, targetId = null, jobs = DEFAULT_JOB
   const payload = { schemaVersion: 'task-delegate.verify.v1', live, jobs, timeoutMs, report };
   if (machineOutput) console.log(JSON.stringify(payload, null, 2));
   else {
-    const passed = report.filter(x => x.status === 'passed').length;
-    const ready = report.filter(x => x.status === 'ready-for-live-verification').length;
+    const interactiveHosts = report.filter(
+      x => x.verificationMode === 'manual-host'
+    ).length;
+    const livePassed = report.filter(
+      x => x.status === 'passed' && x.live === true
+    ).length;
+    const ready = report.filter(
+      x => x.status === 'ready-for-live-verification'
+    ).length;
     const failed = report.filter(x => x.status === 'failed').length;
-    console.log(`\nVerification complete: ${passed} passed, ${ready} ready, ${failed} failed.`);
+
+    console.log(
+      `\nVerification complete: ${livePassed} live passed, ` +
+      `${interactiveHosts} interactive host ready, ` +
+      `${ready} awaiting live verification, ${failed} failed.`
+    );
   }
   if (report.some(x => x.status === 'failed')) process.exitCode = 2;
   return payload;

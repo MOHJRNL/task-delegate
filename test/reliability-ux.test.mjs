@@ -41,3 +41,15 @@ test('verifier uses bounded worker concurrency', async () => {
   assert.match(manage, /mapWithConcurrency/);
   assert.match(manage, /timeoutMs \+ 10_000/);
 });
+
+test('verification summary distinguishes live targets from interactive hosts', async () => {
+  const source = await readFile(
+    new URL('../skills/task-delegate/scripts/manage.mjs', import.meta.url),
+    'utf8'
+  );
+
+  assert.match(source, /verificationMode === 'manual-host'/);
+  assert.match(source, /x\.status === 'passed' && x\.live === true/);
+  assert.match(source, /live passed/);
+  assert.match(source, /interactive host ready/);
+});
