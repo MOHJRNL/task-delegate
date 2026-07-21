@@ -1,87 +1,186 @@
 import os from 'node:os';
 import path from 'node:path';
-import { mkdir, readFile, writeFile, stat, cp, rm } from 'node:fs/promises';
+import { cp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
+const EXPECTED_VERSION = '2.1.0';
 const home = () => process.env.TASK_DELEGATE_HOME || os.homedir();
+const localSkillDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 export const HOSTS = [
-  { id: 'claude-code', name: 'Claude Code', binary: 'claude', invocation: '/task-delegate', skillsAgent: 'claude-code' },
-  { id: 'codex', name: 'Codex CLI', binary: 'codex', invocation: '$task-delegate', skillsAgent: 'codex' },
-  { id: 'opencode', name: 'OpenCode', binary: 'opencode', invocation: '/task-delegate', skillsAgent: 'opencode' },
-  { id: 'antigravity', name: 'Antigravity', binary: 'agy', invocation: 'task-delegate skill', skillsAgent: 'antigravity' },
-  { id: 'kimi', name: 'Kimi Code CLI', binary: 'kimi', invocation: 'task-delegate skill', skillsAgent: 'kimi' },
-  { id: 'grok', name: 'Grok CLI', binary: 'grok', invocation: 'task-delegate skill', skillsAgent: 'grok' },
+  { id: 'claude-code', name: 'Claude Code', binary: 'claude', invocation: '/task-delegate', installKind: 'copy', installPath: () => path.join(home(), '.claude', 'skills', 'task-delegate') },
+  { id: 'codex', name: 'Codex CLI', binary: 'codex', invocation: '$task-delegate', installKind: 'shared', installPath: () => path.join(home(), '.agents', 'skills', 'task-delegate') },
+  { id: 'opencode', name: 'OpenCode', binary: 'opencode', invocation: '/task-delegate', installKind: 'shared', installPath: () => path.join(home(), '.agents', 'skills', 'task-delegate') },
+  { id: 'antigravity', name: 'Antigravity', binary: 'agy', invocation: 'task-delegate skill', installKind: 'shared', installPath: () => path.join(home(), '.agents', 'skills', 'task-delegate') },
+  { id: 'kimi', name: 'Kimi Code CLI', binary: 'kimi', invocation: 'task-delegate skill', installKind: 'shared', installPath: () => path.join(home(), '.agents', 'skills', 'task-delegate') },
+  { id: 'grok', name: 'Grok CLI', binary: 'grok', invocation: 'task-delegate skill', installKind: 'copy', installPath: () => path.join(home(), '.grok', 'skills', 'task-delegate') },
   { id: 'terminal', name: 'Terminal', binary: 'task-delegate', invocation: 'task-delegate delegate', builtIn: true }
 ];
 
-export function manifestPath() { return path.join(home(), '.task-delegate', 'install-manifest.json'); }
+export function manifestPath() {
+  return path.join(home(), '.task-delegate', 'install-manifest.json');
+}
+
+export function bundledSkillPath() {
+  return localSkillDir;
+}
 
 export async function commandExists(binary) {
   return new Promise(resolve => {
-    const p = spawn(process.platform === 'win32' ? 'where' : 'sh', process.platform === 'win32' ? [binary] : ['-lc', `command -v ${JSON.stringify(binary)}`], { stdio: 'ignore' });
-    p.on('error', () => resolve(false));
-    p.on('close', code => resolve(code === 0));
+    const command = process.platform === 'win32' ? 'where' : 'sh';
+    const args = process.platform === 'win32' ? [binary] : ['-lc', `command -v ${JSON.stringify(binary)}`];
+    const child = spawn(command, args, { stdio: 'ignore' });
+    child.on('error', () => resolve(false));
+    child.on('close', code => resolve(code === 0));
   });
 }
 
-function run(command, args, options = {}) {
-  return new Promise(resolve => {
-    const p = spawn(command, args, { ...options, stdio: ['ignore', 'pipe', 'pipe'] });
-    let stdout = '', stderr = '';
-    p.stdout?.on('data', d => stdout += d);
-    p.stderr?.on('data', d => stderr += d);
-    p.on('error', error => resolve({ exitCode: 127, stdout, stderr: `${stderr}${error.message}` }));
-    p.on('close', code => resolve({ exitCode: code ?? 1, stdout, stderr }));
-  });
+async function exists(targetPath) {
+  try {
+    await stat(targetPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function skillVersion(skillDir) {
+  try {
+    const content = await readFile(path.join(skillDir, 'SKILL.md'), 'utf8');
+    return content.match(/^\s*version:\s*["']?([^"'\s]+)["']?\s*$/m)?.[1] || null;
+  } catch {
+    return null;
+  }
+}
+
+async function inspectHost(host) {
+  if (host.builtIn) {
+    const binaryDetected = await commandExists('task-delegate');
+    return { ...host, binaryDetected, status: binaryDetected ? 'ready' : 'missing-cli' };
+  }
+
+  const binaryDetected = await commandExists(host.binary);
+  const installPath = host.installPath();
+  const skillInstalled = await exists(path.join(installPath, 'SKILL.md'));
+  const installedVersion = skillInstalled ? await skillVersion(installPath) : null;
+  const versionMatches = installedVersion === EXPECTED_VERSION;
+  const status = !binaryDetected
+    ? 'host-cli-not-detected'
+    : !skillInstalled
+      ? 'skill-not-installed'
+      : !versionMatches
+        ? 'version-mismatch'
+        : 'ready';
+
+  return {
+    ...host,
+    installPath,
+    binaryDetected,
+    skillInstalled,
+    installedVersion,
+    expectedVersion: EXPECTED_VERSION,
+    versionMatches,
+    status
+  };
 }
 
 export async function installHosts({ dryRun = false, check = false } = {}) {
   const results = [];
-  const installed = [];
+  const installedPaths = new Set();
+  const installedHosts = [];
+
   for (const host of HOSTS) {
     if (host.builtIn) {
-      const available = await commandExists('task-delegate');
-      results.push({ ...host, status: available ? 'ready' : 'missing-cli' });
+      results.push(await inspectHost(host));
       continue;
     }
-    const detected = await commandExists(host.binary);
-    if (!detected) {
-      results.push({ ...host, status: 'host-cli-not-detected' });
-      continue;
-    }
+
+    const binaryDetected = await commandExists(host.binary);
+    const installPath = host.installPath();
+
     if (check) {
-      results.push({ ...host, status: 'detected', note: 'Run setup without --check to install or refresh the portable skill.' });
+      results.push(await inspectHost(host));
       continue;
     }
+
+    if (!binaryDetected) {
+      results.push({ ...host, installPath, binaryDetected: false, status: 'host-cli-not-detected' });
+      continue;
+    }
+
     if (dryRun) {
-      results.push({ ...host, status: 'would-install' });
+      results.push({ ...host, installPath, binaryDetected: true, source: localSkillDir, status: 'would-install' });
       continue;
     }
-    const r = await run('npx', ['--yes', 'skills', 'add', 'MOHJRNL/task-delegate', '--skill', 'task-delegate', '--global', '--agent', host.skillsAgent, '--yes']);
-    const status = r.exitCode === 0 ? 'installed' : 'failed';
-    results.push({ ...host, status, exitCode: r.exitCode, stderr: r.stderr.trim() || undefined });
-    if (status === 'installed') installed.push(host.id);
+
+    try {
+      if (!installedPaths.has(installPath)) {
+        await rm(installPath, { recursive: true, force: true });
+        await mkdir(path.dirname(installPath), { recursive: true });
+        await cp(localSkillDir, installPath, { recursive: true, force: true });
+        installedPaths.add(installPath);
+      }
+
+      const installedVersion = await skillVersion(installPath);
+      const versionMatches = installedVersion === EXPECTED_VERSION;
+      results.push({
+        ...host,
+        installPath,
+        source: localSkillDir,
+        binaryDetected: true,
+        skillInstalled: true,
+        installedVersion,
+        expectedVersion: EXPECTED_VERSION,
+        versionMatches,
+        status: versionMatches ? 'installed' : 'failed'
+      });
+      if (versionMatches) installedHosts.push(host.id);
+    } catch (error) {
+      results.push({ ...host, installPath, source: localSkillDir, binaryDetected: true, status: 'failed', error: error.message });
+    }
   }
+
   if (!dryRun && !check) {
     const file = manifestPath();
     await mkdir(path.dirname(file), { recursive: true });
-    await writeFile(file, `${JSON.stringify({ schemaVersion: 'task-delegate.install.v1', version: '2.1.0', installedAt: new Date().toISOString(), installedHosts: installed }, null, 2)}\n`);
+    await writeFile(file, `${JSON.stringify({
+      schemaVersion: 'task-delegate.install.v2',
+      version: EXPECTED_VERSION,
+      source: localSkillDir,
+      installedAt: new Date().toISOString(),
+      installedHosts,
+      installedPaths: [...installedPaths]
+    }, null, 2)}\n`);
   }
+
   return results;
 }
 
 export async function uninstallHosts() {
   const file = manifestPath();
   let manifest = null;
-  try { manifest = JSON.parse(await readFile(file, 'utf8')); } catch {}
-  const results = [];
-  for (const id of manifest?.installedHosts || []) {
-    const host = HOSTS.find(h => h.id === id);
-    if (!host) continue;
-    const r = await run('npx', ['--yes', 'skills', 'remove', 'task-delegate', '--global', '--agent', host.skillsAgent, '--yes']);
-    results.push({ host: id, status: r.exitCode === 0 ? 'removed' : 'failed', exitCode: r.exitCode, stderr: r.stderr.trim() || undefined });
+  try {
+    manifest = JSON.parse(await readFile(file, 'utf8'));
+  } catch {}
+
+  const paths = new Set(manifest?.installedPaths || []);
+  if (paths.size === 0) {
+    for (const host of HOSTS) {
+      if (!host.builtIn) paths.add(host.installPath());
+    }
   }
+
+  const results = [];
+  for (const installPath of paths) {
+    try {
+      await rm(installPath, { recursive: true, force: true });
+      results.push({ installPath, status: 'removed' });
+    } catch (error) {
+      results.push({ installPath, status: 'failed', error: error.message });
+    }
+  }
+
   await rm(file, { force: true });
   return results;
 }

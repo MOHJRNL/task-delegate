@@ -112,10 +112,30 @@ export async function update() {
   await setup({});
 }
 
+function printManagementHelp(command) {
+  const help = {
+    setup: `Usage: task-delegate setup [--check|--dry-run]
+
+Installs the bundled TaskDelegate skill from the current package.
+  --check     Verify host binaries, installed skill paths, and versions.
+  --dry-run   Show what would be installed without changing files.`,
+    verify: `Usage: task-delegate verify [--live] [--target <id>]
+
+  --live          Run a real bounded smoke test.
+  --target <id>   Verify one target only.`,
+    doctor: 'Usage: task-delegate doctor',
+    hosts: 'Usage: task-delegate hosts',
+    update: 'Usage: task-delegate update',
+    uninstall: 'Usage: task-delegate uninstall'
+  };
+  console.log(help[command] || 'Use task-delegate --help for available commands.');
+}
+
 const [command, ...argv] = process.argv.slice(2);
 const flags = new Set(argv);
 try {
-  if (command === 'setup') await setup({ check: flags.has('--check'), dryRun: flags.has('--dry-run') });
+  if (flags.has('--help') || flags.has('-h')) printManagementHelp(command);
+  else if (command === 'setup') await setup({ check: flags.has('--check'), dryRun: flags.has('--dry-run') });
   else if (command === 'verify') await verify({ live: flags.has('--live'), targetId: argv.includes('--target') ? argv[argv.indexOf('--target') + 1] : null });
   else if (command === 'doctor') await doctor();
   else if (command === 'hosts') await hosts();
