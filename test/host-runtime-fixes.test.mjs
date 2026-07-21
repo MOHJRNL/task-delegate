@@ -46,17 +46,3 @@ test('live verifier invokes the local CLI', async () => {
     /run\('task-delegate', \['delegate'/
   );
 });
-
-test('live verifier invokes the local CLI', async () => {
-  const source = await readFile(
-    'skills/task-delegate/scripts/manage.mjs',
-    'utf8'
-  );
-
-  assert.match(source, /localCliPath/);
-  assert.match(source, /process\.execPath/);
-  assert.doesNotMatch(
-    source,
-    /run\('task-delegate', \['delegate'/
-  );
-});
