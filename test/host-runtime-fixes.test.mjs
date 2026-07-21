@@ -28,9 +28,9 @@ test('changed files include untracked and ignore internal artifacts', async () =
   assert.match(source, /\.task-delegate\//);
 });
 
-test('Antigravity is manual host only', async () => {
+test('Antigravity passes manual host verification', async () => {
   const source = await readFile('skills/task-delegate/scripts/manage.mjs', 'utf8');
-  assert.match(source, /manual-host-only/);
+  assert.match(source, /verificationMode = 'manual-host'/);
 });
 
 test('live verifier invokes the local CLI', async () => {
