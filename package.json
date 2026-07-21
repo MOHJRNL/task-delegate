@@ -1,6 +1,6 @@
 {
   "name": "task-delegate",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "One portable delegation interface for discovering and dispatching bounded tasks to CLI coding agents with manual review and normalized results.",
   "type": "module",
   "bin": {
