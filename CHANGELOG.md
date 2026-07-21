@@ -2,6 +2,17 @@
 
 All notable changes to TaskDelegate are documented here.
 
+## [2.1.1] - 2026-07-21
+
+### Documentation
+
+- Restored npm, license, Node.js, GitHub release, and skills.sh badges.
+- Added an animated workflow demonstration.
+- Added a concise product definition and feature summary.
+- Renamed the host section to “Supported coding agents and invocation.”
+- Added FAQ content for installation, routing, commits, results, and autonomy.
+- Improved README discoverability for search engines and AI answer systems.
+
 ## [2.1.0] - 2026-07-21
 
 ### Added
