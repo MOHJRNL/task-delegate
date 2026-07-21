@@ -121,7 +121,16 @@ function normalizeInvocation(target, invocation, projectDir) {
 
   if (target.id === 'opencode' || target.id === 'zai') {
     removeOption('--dir');
-    args.push('--dir', projectDir);
+
+    const runIndex = args.indexOf('run');
+    const insertIndex = runIndex >= 0 ? runIndex + 1 : 0;
+
+    if (!args.includes('--auto')) {
+      args.splice(insertIndex, 0, '--auto');
+    }
+
+    const autoIndex = args.indexOf('--auto');
+    args.splice(autoIndex + 1, 0, '--dir', projectDir);
   }
 
   if (target.id === 'codex') {

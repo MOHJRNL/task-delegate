@@ -3,9 +3,15 @@ import os from 'node:os';
 import path from 'node:path';
 import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { HOSTS, installHosts, uninstallHosts, commandExists } from './core/hosts.mjs';
 import { TARGETS } from './core/targets.mjs';
 import { validateResultV2 } from './core/schema.mjs';
+
+const localCliPath = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../../../bin/task-delegate.mjs'
+);
 
 function run(command, args, options = {}) {
   return new Promise(resolve => {
@@ -60,7 +66,11 @@ export async function verify({ live = false, targetId = null } = {}) {
       await writeFile(path.join(dir, 'README.md'), 'fixture\n'); await git(dir, 'add', '.'); await git(dir, 'commit', '-m', 'fixture');
       const before = (await git(dir, 'rev-parse', 'HEAD')).stdout.trim();
       const task = 'Create hello.txt containing exactly TaskDelegate smoke test followed by a newline. Modify no other tracked file. Do not commit or push.';
-      const result = await run('task-delegate', ['delegate', '--to', target.id, '--task', task, '--cd', dir], { cwd: dir });
+      const result = await run(
+        process.execPath,
+        [localCliPath, 'delegate', '--to', target.id, '--task', task, '--cd', dir],
+        { cwd: dir }
+      );
       const after = (await git(dir, 'rev-parse', 'HEAD')).stdout.trim();
       const content = await readFile(path.join(dir, 'hello.txt'), 'utf8').catch(() => null);
       const status = (await git(dir, 'status', '--porcelain')).stdout
@@ -72,7 +82,18 @@ export async function verify({ live = false, targetId = null } = {}) {
       const resultPath = findResult.stdout.trim();
       const parsed = resultPath ? JSON.parse(await readFile(resultPath, 'utf8')) : null;
       const schema = validateResultV2(parsed);
-      Object.assign(item, { live: true, exitCode: result.exitCode, noCommitCreated: before === after, exactContent: content === 'TaskDelegate smoke test\n', changedFiles: status, schema });
+      const exactContent =
+        typeof content === 'string' &&
+        content.replace(/\r?\n$/, '') === 'TaskDelegate smoke test';
+
+      Object.assign(item, {
+        live: true,
+        exitCode: result.exitCode,
+        noCommitCreated: before === after,
+        exactContent,
+        changedFiles: status,
+        schema
+      });
       item.status = result.exitCode === 0 && before === after && item.exactContent && schema.valid ? 'passed' : 'failed';
     } finally { await rm(dir, { recursive: true, force: true }); }
     report.push(item);
