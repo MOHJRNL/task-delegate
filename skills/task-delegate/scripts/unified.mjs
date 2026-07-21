@@ -179,6 +179,11 @@ export async function delegate(argv) {
   let target = options.to ? getTarget(options.to.toLowerCase()) : undefined;
   if (target?.status === 'coming-soon') throw new Error('Auto-select is coming soon. Choose an explicit target.');
   if (!target) target = await chooseInteractively(targets);
+  if (target.id === 'agy' || target.headless === false) {
+    throw new Error(
+      'Antigravity is available as an interactive origin host, but cannot currently run delegated tasks headlessly. Choose opencode, codex, claude, kimi, zai, or grok.'
+    );
+  }
   const discovered = targets.find((item) => item.id === target.id);
   if (!discovered?.available) throw new Error(`${target.name} CLI is not available in PATH.`);
   const task = options.task || await readTaskInteractively();

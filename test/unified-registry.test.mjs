@@ -6,7 +6,16 @@ import { TARGETS, buildInvocation, getTarget } from '../skills/task-delegate/scr
 test('registry exposes the agreed delegation targets', () => {
   assert.deepEqual(
     TARGETS.map((target) => target.id),
-    ['opencode', 'codex', 'claude', 'agy', 'kimi', 'zai', 'grok', 'auto']
+    [
+    'opencode',
+    'codex',
+    'claude',
+    'kimi',
+    'zai',
+    'grok',
+    'agy',
+    'auto'
+  ]
   );
 });
 
