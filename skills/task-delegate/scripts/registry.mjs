@@ -1,10 +1,10 @@
 export const TARGETS = [
-  { id: 'opencode', name: 'OpenCode', binary: 'opencode', status: 'stable', defaultMode: 'manual' },
-  { id: 'codex', name: 'Codex', binary: 'codex', status: 'stable', defaultMode: 'manual' },
-  { id: 'claude', name: 'Claude Code', binary: 'claude', status: 'stable', defaultMode: 'manual' },
-  { id: 'kimi', name: 'Kimi', binary: 'kimi', status: 'experimental', defaultMode: 'manual' },
-  { id: 'zai', name: 'z.ai', binary: 'opencode', status: 'stable', defaultMode: 'manual', defaultModel: 'zai-coding-plan/glm-4.7' },
-  { id: 'grok', name: 'Grok', binary: 'grok', status: 'experimental', defaultMode: 'manual' },
+  { id: 'opencode', name: 'OpenCode', binary: 'opencode', status: 'supported', defaultMode: 'manual' },
+  { id: 'codex', name: 'Codex', binary: 'codex', status: 'supported', defaultMode: 'manual' },
+  { id: 'claude', name: 'Claude Code', binary: 'claude', status: 'supported', defaultMode: 'manual' },
+  { id: 'kimi', name: 'Kimi', binary: 'kimi', status: 'supported', defaultMode: 'manual' },
+  { id: 'zai', name: 'z.ai', binary: 'opencode', status: 'supported', defaultMode: 'manual', defaultModel: 'zai-coding-plan/glm-4.7' },
+  { id: 'grok', name: 'Grok', binary: 'grok', status: 'supported', defaultMode: 'manual' },
   { id: 'agy', name: 'Antigravity', binary: 'agy', status: 'supported', defaultMode: 'manual', headless: true }
 ];
 
