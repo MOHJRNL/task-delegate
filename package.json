@@ -47,6 +47,8 @@
     "examples/",
     "AGENTS.md",
     "README.md",
+    "MIGRATION.md",
+    "CHANGELOG.md",
     "LICENSE",
     "skills.sh.json",
     "PUBLISHING.md",
