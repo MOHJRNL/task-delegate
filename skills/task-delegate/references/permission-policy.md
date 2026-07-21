@@ -61,7 +61,9 @@ z.ai uses the OpenCode adapter with the configured z.ai model. The same workspac
 
 ### Grok
 
-Grok uses single-prompt execution with workspace binding and automatic approval required for non-interactive editing. Review remains mandatory.
+Grok uses single-prompt execution with the delegated process working directory set to the selected project. TaskDelegate does not currently pass a Grok-specific workspace or permission-approval flag.
+
+Repository safety therefore relies on the selected process working directory, bounded timeout, delegated prompt boundaries, commit detection, changed-file inspection, Git diff review, and normalized result validation. Manual review remains mandatory.
 
 ### Antigravity
 
