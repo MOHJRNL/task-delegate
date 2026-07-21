@@ -1,6 +1,6 @@
 export const backend = {
   name: 'codex',
-  status: 'experimental',
+  status: 'supported',
   binary: 'codex',
   defaultMode: 'manual',
   supportedModes: ['plan', 'manual']
@@ -20,8 +20,7 @@ export function buildInvocation({ prompt, mode, model }) {
     args,
     env: {},
     warnings: [
-      'Codex adapter is experimental in TaskDelegate v0.1.',
-      'TaskDelegate does not use dangerous bypass/yolo modes for Codex.'
+      'Codex runs with bounded workspace-write access. Review the resulting diff.'
     ]
   };
 }

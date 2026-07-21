@@ -1,46 +1,50 @@
-# Result schema
+# Result contract
 
-TaskDelegate writes a compact `result.json` for every run. The orchestrator should read this first and open logs only when needed.
+TaskDelegate writes a compact normalized `result.json` for every delegated run. Read this first and open detailed logs only when needed.
 
-## Schema v0.1
+## Contract
+
+The current contract identifier is:
+
+```text
+task-delegate.result.v2
+```
+
+A normalized result includes the selected target, mode, project and run directories, timing, process outcome, changed files, verification data, warnings, and review requirements.
+
+Example:
 
 ```json
 {
-  "schemaVersion": "0.1",
-  "skill": "task-delegate",
-  "backend": "opencode",
-  "backendStatus": "stable",
-  "mode": "safe-auto",
+  "schemaVersion": "task-delegate.result.v2",
+  "taskId": "example-task-id",
+  "target": "codex",
+  "mode": "manual",
   "projectDir": "/path/to/project",
-  "runDir": "/path/to/project/.task-delegate/runs/...",
-  "startedAt": "2026-07-08T00:00:00.000Z",
-  "endedAt": "2026-07-08T00:00:00.000Z",
-  "durationMs": 12345,
+  "runDir": "/path/to/project/.task-delegate/runs/example-task-id",
+  "startedAt": "2026-07-21T00:00:00.000Z",
+  "endedAt": "2026-07-21T00:00:20.000Z",
+  "durationMs": 20000,
   "exitCode": 0,
   "timedOut": false,
-  "brief": {
-    "path": "brief.md",
-    "lines": 48,
-    "maxLines": 120
-  },
-  "git": {
-    "dirtyBefore": false,
-    "dirtyAfter": true,
-    "changedFiles": ["src/example.ts"],
-    "diffStatPath": "diff-stat.txt",
-    "changedFilesPath": "changed-files.txt"
-  },
-  "artifacts": {
-    "promptPath": "prompt.md",
-    "stdoutPath": "stdout.log",
-    "stderrPath": "stderr.log"
-  },
+  "changedFiles": ["src/example.ts"],
   "warnings": [],
   "reviewRequired": true,
   "commitAllowed": false
 }
 ```
 
+## Trust boundary
+
+A backend's own success message is not sufficient proof of completion. The originating agent must verify:
+
+- process exit and timeout state;
+- normalized schema validity;
+- actual changed files;
+- requested output or test result;
+- unchanged Git HEAD unless the user explicitly requested otherwise;
+- diff safety and scope.
+
 ## Design principle
 
-Keep `result.json` compact. Do not embed full stdout, stderr, or diff content. Store paths instead.
+Keep `result.json` compact. Store large stdout, stderr, prompts, and diff data in separate run artifacts and reference their paths.

@@ -33,31 +33,29 @@ When no target is supplied, show the available target list and ask the user to c
 
 ## Interactive host flow
 
-When invoked without both a target and a task, start this flow immediately:
+When invoked without both a target and a task:
 
 1. Run `task-delegate targets --json`.
 2. Present exactly these seven targets in this canonical order:
    1. OpenCode
    2. Codex
-   3. Claude
+   3. Claude Code
    4. Kimi
    5. z.ai
    6. Grok
    7. Antigravity
-3. Preserve this order even if the host, registry, or discovery tool returns a different order.
+3. Preserve this order even if a host or discovery tool returns another order.
 4. Ask the user to choose one target by number or id.
 5. Ask for the task if it was not already supplied.
 6. Show the current project directory and manual-review mode.
 7. Delegate with `task-delegate delegate --to <target> --task <task> --cd <project>`.
 8. Return a concise completion summary, changed files, verification status, and review options.
 
-If the host's structured question or selection UI supports fewer than seven choices, do not call it. Use the numbered text list immediately and ask the user to reply with a number or target id.
+If the host selection UI supports fewer than seven choices, do not call it. Use the numbered text list immediately.
 
-Do not add “Write-in”, “Other”, or any eighth item to the delegation target list. Free-text target entry may be accepted separately, but it is not a target.
+Do not add “Write-in”, “Other”, or an eighth target. Free-text target entry may be accepted separately, but it is not a target.
 
 Do not run bare `task-delegate delegate` before target discovery. Do not silently choose a target. Never commit or push automatically.
-
-Antigravity is available as an interactive origin host. It remains visible as target 7 for capability transparency, but until a stable headless Antigravity execution interface is verified, selecting it must explain the limitation and request one of the six headless targets.
 
 ## Canonical targets
 
@@ -67,29 +65,44 @@ Antigravity is available as an interactive origin host. It remains visible as ta
 4. Kimi (`kimi`)
 5. z.ai through OpenCode (`zai`)
 6. Grok (`grok`)
-7. Antigravity (`agy`, interactive origin host only)
+7. Antigravity (`agy`)
 
-Auto-select is coming soon and is not part of the seven-target list.
+All seven public targets are supported by TaskDelegate v2.1 and are exercised by the live release verifier when their CLIs are installed and authenticated.
+
+## Antigravity headless security note
+
+Antigravity print mode cannot prompt for write permissions. TaskDelegate therefore runs Antigravity with:
+
+- explicit workspace binding through `--add-dir <project>`;
+- sandbox mode;
+- non-interactive permission approval;
+- a bounded timeout;
+- no automatic commit or push;
+- mandatory result and Git diff review.
+
+The user or originating agent must review every Antigravity-generated change before accepting it.
 
 ## Operating policy
 
 - Manual review is the default.
-- Plan mode is allowed.
-- Automatic target selection is not active in v2.1.
-- Do not create open recursive agent loops.
-- Backend agents must not commit, push, rewrite history, read secrets, or write outside the project.
+- Plan mode is supported.
+- Automatic target selection is intentionally not active in v2.1.
+- Do not create recursive or unbounded agent loops.
+- Delegated prompts prohibit commits, pushes, history rewrites, secret access, and writes outside the selected project.
 - Require a clean worktree unless the user explicitly accepts `--allow-dirty`.
-- The originating agent reviews the normalized result and Git diff before presenting an outcome.
+- The originating agent must review the normalized result and Git diff before presenting completion.
 - Use the legacy `run --brief ...` command only for advanced or backward-compatible workflows.
 
 ## Result contract
 
 Each delegation writes `.task-delegate/runs/<task-id>/result.json` using `task-delegate.result.v2`, plus the compact brief, prompt, stdout, stderr, changed-file list, and diff stat.
 
+Do not trust a backend-reported success status alone. Validate the normalized result, actual changed files, Git state, and requested task outcome.
+
 ## Review flow
 
 1. Discover targets.
-2. Select an explicit headless target.
+2. Select an explicit target.
 3. Generate the bounded brief internally.
 4. Dispatch through the registry adapter.
 5. Read the normalized result.

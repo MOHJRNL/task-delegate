@@ -1,6 +1,6 @@
 export const backend = {
   name: 'opencode',
-  status: 'stable',
+  status: 'supported',
   binary: 'opencode',
   defaultMode: 'safe-auto',
   supportedModes: ['plan', 'manual', 'safe-auto']

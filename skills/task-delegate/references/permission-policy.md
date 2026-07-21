@@ -1,74 +1,83 @@
 # Permission policy
 
-TaskDelegate optimizes for efficient delegation without giving backend agents ownership of the repository.
+TaskDelegate delegates implementation work while keeping repository ownership and final approval with the user or originating agent.
 
-## Universal hard rules
+## Unified v2.1 modes
 
-Backend agents must not:
-
-- commit
-- push
-- reset hard
-- clean files
-- rewrite history
-- read secrets
-- read `.env` files
-- write outside the project directory
-- install packages unless explicitly allowed
-
-## Modes
-
-| Mode | Description |
+| Mode | Behavior |
 |---|---|
-| `plan` | Analyze and propose a plan only. |
-| `manual` | Use conservative/manual backend permissions. |
-| `safe-auto` | Non-interactive execution with deny rules. Stable only for OpenCode in v0.1. |
+| `plan` | Analyze and return a plan. File edits are prohibited. |
+| `manual` | Execute a bounded task using the target's supported non-interactive editing mode. Review remains mandatory. |
 
-## OpenCode `safe-auto`
+The unified `task-delegate delegate` flow does not expose automatic target selection or unrestricted autonomous execution.
 
-OpenCode supports `--auto`, which auto-approves permission requests that are not explicitly denied. TaskDelegate sets `OPENCODE_PERMISSION` with restrictive deny/ask rules for `safe-auto`.
+## Universal task boundaries
 
-Default OpenCode permission profile:
+Every delegated prompt prohibits:
 
-```json
-{
-  "read": {
-    "*": "allow",
-    "*.env": "deny",
-    "*.env.*": "deny",
-    "*.pem": "deny",
-    "*.key": "deny",
-    "id_rsa*": "deny"
-  },
-  "edit": {
-    "*": "allow",
-    "*.env": "deny",
-    "*.env.*": "deny"
-  },
-  "bash": {
-    "*": "ask",
-    "git status*": "allow",
-    "git diff*": "allow",
-    "git log*": "allow",
-    "git show*": "allow",
-    "git add*": "deny",
-    "git commit*": "deny",
-    "git push*": "deny",
-    "git reset*": "deny",
-    "git clean*": "deny",
-    "rm *": "deny",
-    "rm -rf*": "deny"
-  },
-  "webfetch": "deny",
-  "websearch": "deny",
-  "external_directory": "deny"
-}
-```
+- commits and pushes;
+- hard resets, cleans, and history rewrites;
+- reading `.env`, private keys, tokens, or unrelated secrets;
+- writing outside the selected project;
+- package installation unless the task explicitly permits it;
+- destructive or externally visible actions not explicitly requested.
 
-## Codex v0.1
+These prompt boundaries are defense-in-depth, not a substitute for host sandboxing and post-run verification.
 
-Codex is experimental/manual in v0.1. TaskDelegate does not use dangerous bypass modes. The adapter sends strong prompt-level boundaries and relies on Codex CLI sandbox/approval behavior.
+## Deterministic controls
 
-## Claude v0.1
+TaskDelegate also applies:
 
-Claude is experimental/manual in v0.1. Use `plan` for planning and `manual` for implementation. Do not default to Claude auto mode.
+- an explicit project directory;
+- clean-worktree validation unless `--allow-dirty` is used;
+- bounded execution timeout;
+- one retry only for transient launch or timeout failures;
+- no automatic commit or push;
+- normalized result validation;
+- Git changed-file and diff inspection;
+- verification that delegated runs do not create commits.
+
+## Target-specific behavior
+
+### OpenCode
+
+The current unified adapter uses OpenCode build or plan agents and disables automatic update and pruning for predictable delegated runs. The legacy `run` compatibility command may expose `safe-auto` with an explicit deny/ask profile.
+
+### Codex
+
+Codex runs in workspace-write mode for implementation and keeps commit and push prohibited by the delegated prompt and post-run Git verification.
+
+### Claude Code
+
+Claude implementation runs use `acceptEdits`; plan mode uses Claude's plan permission mode. Manual review remains required.
+
+### Kimi
+
+Kimi uses non-interactive prompt execution. TaskDelegate verifies the resulting files and Git state rather than trusting textual completion alone.
+
+### z.ai
+
+z.ai uses the OpenCode adapter with the configured z.ai model. The same workspace and review controls apply.
+
+### Grok
+
+Grok uses single-prompt execution with workspace binding and automatic approval required for non-interactive editing. Review remains mandatory.
+
+### Antigravity
+
+Antigravity print mode auto-denies write tools when it cannot prompt. Reliable headless editing therefore requires sandbox mode with non-interactive permission approval.
+
+TaskDelegate constrains this behavior with:
+
+- `--add-dir <project>` workspace binding;
+- `--sandbox`;
+- a bounded print timeout;
+- no automatic commit or push;
+- normalized result validation;
+- changed-file, content, and Git HEAD verification.
+
+Because Antigravity's permission bypass is broad inside its execution context, users must review every diff and should run TaskDelegate only in repositories they trust.
+
+## Legacy compatibility mode
+
+The legacy `task-delegate run --brief ...` path retains `safe-auto` and `--force` options for backward compatibility. They are advanced options, not defaults for the unified v2.1 workflow.

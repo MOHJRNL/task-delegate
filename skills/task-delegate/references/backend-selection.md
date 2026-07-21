@@ -1,42 +1,35 @@
-# Backend selection
+# Target selection
 
-TaskDelegate v0.1 uses manual backend selection. Do not add a smart router yet.
+TaskDelegate v2.1 uses explicit target selection. Automatic routing is intentionally excluded because deterministic selection is simpler, safer, easier to debug, and less likely to waste tokens.
 
-## Backend matrix
+## Public targets
 
-| Backend | Status | Best for | Default mode |
-|---|---|---|---|
-| OpenCode | Stable | Mechanical edits, tests, simple features, repetitive implementation | `safe-auto` |
-| Codex | Experimental | Reasoning-heavy implementation, bug fixing, second pass | `manual` |
-| Claude | Experimental | Planning, architecture-sensitive changes, complex refactors | `manual` or `plan` |
+1. OpenCode
+2. Codex
+3. Claude Code
+4. Kimi
+5. z.ai
+6. Grok
+7. Antigravity
 
-## Selection rules
+All seven targets are supported and included in the live verifier when their CLIs are installed and authenticated.
 
-Use OpenCode when:
+## Practical selection guidance
 
-- The task is clear and bounded.
-- The change is mostly implementation.
-- Cost/context efficiency matters most.
-- You want non-interactive execution with deny rules.
+Use OpenCode for clear bounded implementation, tests, and repetitive edits.
 
-Use Codex when:
+Use Codex for reasoning-heavy implementation, debugging, or a second implementation pass.
 
-- The task needs deeper reasoning than a mechanical edit.
-- You want a second implementation or review pass.
-- OpenCode failed or produced a weak result.
+Use Claude Code for architecture-sensitive changes, complex refactors, or plan-first work.
 
-Use Claude when:
+Use Kimi for bounded implementation where its local CLI is already configured.
 
-- The task involves architecture tradeoffs.
-- The codebase is complex.
-- You want a high-quality plan before editing.
-- The change is sensitive enough to prefer manual permissions.
+Use z.ai when you want the configured z.ai coding model through the OpenCode runtime.
 
-## Do not route automatically in v0.1
+Use Grok for bounded implementation through its single-prompt CLI mode.
 
-Automatic routing adds complexity and may waste tokens when it picks the wrong backend. The v0.1 design uses an adapter layer, not a smart router.
+Use Antigravity for headless workspace edits when its CLI is installed and authenticated. Its permission model requires strict diff review.
 
-Roadmap:
+## No automatic routing
 
-- v0.3: `--backend auto` rule-based router
-- v0.5: `--profile cheap|balanced|best` cost-aware router
+TaskDelegate does not silently choose a target. The user or originating agent selects one explicitly after target discovery.
