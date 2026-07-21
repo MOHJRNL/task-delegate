@@ -132,17 +132,39 @@ export function runProcess(command, args, options = {}) {
       cwd,
       env,
       stdio: ['pipe', 'pipe', 'pipe'],
-      shell: false
+      shell: false,
+      detached: process.platform !== 'win32'
     });
 
     let stdout = '';
     let stderr = '';
     let timedOut = false;
 
+    const terminateTree = (signal) => {
+      if (!child.pid) return;
+
+      if (process.platform === 'win32') {
+        const killer = spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], {
+          stdio: 'ignore',
+          windowsHide: true,
+          shell: false
+        });
+        killer.on('error', () => child.kill());
+        killer.unref();
+        return;
+      }
+
+      try {
+        process.kill(-child.pid, signal);
+      } catch {
+        child.kill(signal);
+      }
+    };
+
     const timer = setTimeout(() => {
       timedOut = true;
-      child.kill('SIGTERM');
-      setTimeout(() => child.kill('SIGKILL'), 3000).unref();
+      terminateTree('SIGTERM');
+      setTimeout(() => terminateTree('SIGKILL'), 3000).unref();
     }, timeoutMs);
 
     child.stdout.on('data', (chunk) => { stdout += chunk.toString(); });
