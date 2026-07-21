@@ -14,6 +14,11 @@ test('release documentation describes v2.1 unified seven-target workflow', async
   assert.match(readme, /TaskDelegate v2\.1\.0 has been live-verified against all seven targets/);
   assert.match(readme, /task-delegate delegate/);
   assert.match(readme, /task-delegate\.result\.v2/);
+  assert.match(readme, /What is TaskDelegate\?/);
+  assert.match(readme, /docs\/task-delegate-demo\.gif/);
+  assert.match(readme, /Supported coding agents and invocation/);
+  assert.match(readme, /Frequently asked questions/);
+  assert.match(readme, /img\.shields\.io\/npm\/v\/task-delegate/);
   assert.match(readme, /Reject backend-created Git commits|detection and rejection of commits created by a backend/i);
   assert.doesNotMatch(readme, /Antigravity.*origin host only/i);
 

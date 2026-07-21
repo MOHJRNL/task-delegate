@@ -1,8 +1,31 @@
 # TaskDelegate
 
+[![npm version](https://img.shields.io/npm/v/task-delegate.svg)](https://www.npmjs.com/package/task-delegate)
+[![npm downloads](https://img.shields.io/npm/dm/task-delegate.svg)](https://www.npmjs.com/package/task-delegate)
+[![license](https://img.shields.io/npm/l/task-delegate.svg)](LICENSE)
+[![Node.js](https://img.shields.io/node/v/task-delegate.svg)](https://www.npmjs.com/package/task-delegate)
+[![GitHub release](https://img.shields.io/github/v/release/MOHJRNL/task-delegate)](https://github.com/MOHJRNL/task-delegate/releases)
+[![skills.sh](https://skills.sh/b/MOHJRNL/task-delegate)](https://skills.sh/MOHJRNL/task-delegate)
+
 **One portable interface for delegating bounded coding tasks to seven CLI agents—without handing them ownership of your repository.**
 
-TaskDelegate discovers supported coding CLIs, sends a focused task to the target you select, records a normalized result, and keeps review and commit responsibility with you.
+## What is TaskDelegate?
+
+TaskDelegate is an open-source CLI and agent skill that delegates a narrowly scoped coding task to a supported local coding agent, verifies what changed, writes a normalized result, and leaves review and commit control with you.
+
+It gives OpenCode, Codex, Claude Code, Kimi, z.ai, Grok, and Antigravity one consistent delegation workflow.
+
+### At a glance
+
+- One CLI and one portable agent skill
+- Seven live-verified delegation targets
+- Explicit target selection; no hidden auto-router
+- Plan-only and implementation modes
+- Clean-worktree protection
+- Bounded retries, timeouts, and output capture
+- Commit detection and Git diff inspection
+- Normalized `task-delegate.result.v2` output
+- No automatic commit, push, publish, or acceptance
 
 Supported targets:
 
@@ -16,17 +39,24 @@ Supported targets:
 
 TaskDelegate v2.1.0 has been live-verified against all seven targets.
 
-## Why TaskDelegate?
+## Why use TaskDelegate?
 
-Using several coding agents usually means remembering different commands, permission modes, workspace behaviors, and output formats.
+Using several coding agents usually means remembering different commands, permission modes, workspace behaviors, and output formats. TaskDelegate standardizes that operational layer while keeping the delegated agent bounded and reviewable.
 
-TaskDelegate provides one workflow:
+## How TaskDelegate works
+
+![TaskDelegate workflow: install, discover targets, delegate a bounded task, verify changes, and review the result](docs/task-delegate-demo.gif)
 
 ```text
-discover → select → delegate → verify → review
+bounded task
+  → discover seven supported targets
+  → explicitly select one target
+  → run it in the selected repository
+  → inspect process, Git, and changed-file results
+  → review the uncommitted diff
 ```
 
-It is intentionally not an autonomous router. You choose the target explicitly.
+TaskDelegate is intentionally not an autonomous router. You select the target explicitly, and every implementation run remains subject to review.
 
 ## Requirements
 
@@ -40,7 +70,7 @@ TaskDelegate installs its bundled skill, but it does not install or authenticate
 
 ### Run directly with npm
 
-After v2.1.0 is published:
+Run the current published release:
 
 ```bash
 npx -y task-delegate@latest setup
@@ -99,9 +129,9 @@ Inspect the generated result under:
 
 Every run stores a compact brief, the delegated prompt, stdout, stderr, changed files, diff statistics, and a normalized `result.json`.
 
-## Host usage
+## Supported coding agents and invocation
 
-TaskDelegate can be activated from supported hosts using the host's skill invocation style:
+TaskDelegate can be invoked from these supported coding-agent hosts using each host's skill syntax:
 
 | Host | Invocation |
 |---|---|
@@ -335,6 +365,28 @@ TaskDelegate terminates the delegated process tree when the timeout is reached.
 ### Antigravity reports success but creates nothing
 
 Do not trust its response status alone. Check the normalized TaskDelegate result and actual changed files. TaskDelegate's live verifier validates the requested file content and Git state.
+
+## Frequently asked questions
+
+### Does TaskDelegate install the coding agents?
+
+No. TaskDelegate installs its own bundled skill. OpenCode, Codex, Claude Code, Kimi, Grok, and Antigravity must be installed and authenticated separately. z.ai is used through the OpenCode adapter.
+
+### Does TaskDelegate choose an agent automatically?
+
+No. Version 2.1.0 requires explicit target selection. Hidden or automatic routing is intentionally not exposed.
+
+### Can a delegated agent commit or push code?
+
+TaskDelegate instructs targets not to commit or push, detects a changed Git `HEAD`, and fails the run if a backend creates a commit. You still need to inspect the resulting diff.
+
+### Where are delegation results stored?
+
+Each run writes artifacts under `.task-delegate/runs/<run-id>/`, including `result.json`, logs, prompts, changed files, and diff statistics.
+
+### Is TaskDelegate an autonomous multi-agent framework?
+
+No. It is a bounded delegation interface. It dispatches one scoped task to one selected target and returns control for review.
 
 ## Development
 
