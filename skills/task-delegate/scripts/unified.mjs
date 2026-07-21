@@ -66,7 +66,7 @@ async function discoverTargets() {
   for (const target of TARGETS) {
     results.push({
       ...target,
-      available: target.status === 'coming-soon' ? false : await commandExists(target.binary)
+      available: await commandExists(target.binary)
     });
   }
   return results;
@@ -78,23 +78,17 @@ export async function printTargets({ json = false } = {}) {
     console.log(JSON.stringify({ targets }, null, 2));
     return targets;
   }
-  console.log('Available delegation targets\n');
+  console.log('Available delegation targets:\n');
   targets.forEach((target, index) => {
-    const state = target.status === 'coming-soon'
-      ? 'Coming soon'
-      : target.headless === false
-        ? 'Origin host only'
-        : target.available ? 'Ready' : 'Not available';
-    console.log(`${index + 1}. ${target.name.padEnd(16)} ${state}`);
+    console.log(`${index + 1}. ${target.name}`);
   });
-  console.log('\nMode: Manual by default. Automatic delegation is coming soon.');
   return targets;
 }
 
 async function chooseInteractively(targets) {
   if (!input.isTTY || !output.isTTY) throw new Error('Missing --to. Interactive selection requires a terminal.');
   await printTargets();
-  const selectable = targets.filter((target) => target.available && target.status !== 'coming-soon');
+  const selectable = targets.filter((target) => target.available);
   const rl = readline.createInterface({ input, output });
   try {
     const answer = await rl.question('\nSelect a target number or id: ');
@@ -155,6 +149,10 @@ function normalizeInvocation(target, invocation, projectDir) {
     if (!args.includes('--always-approve')) args.unshift('--always-approve');
     args.unshift('--cwd', projectDir);
   }
+  if (target.id === 'agy') {
+    removeOption('--add-dir');
+    args.push('--add-dir', projectDir);
+  }
   return { ...invocation, args };
 }
 
@@ -189,11 +187,7 @@ export async function delegate(argv) {
   const targets = await discoverTargets();
   let target = options.to ? getTarget(options.to.toLowerCase()) : undefined;
   if (options.to && !target) throw new Error(`Unknown target: ${options.to}`);
-  if (target?.status === 'coming-soon') throw new Error('Auto-select is coming soon. Choose an explicit target.');
   if (!target) target = await chooseInteractively(targets);
-  if (target.id === 'agy' || target.headless === false) {
-    throw new Error('Antigravity is available as an interactive origin host, but cannot currently run delegated tasks headlessly. Choose opencode, codex, claude, kimi, zai, or grok.');
-  }
   const discovered = targets.find((item) => item.id === target.id);
   if (!discovered?.available) throw new Error(`${target.name} CLI is not available in PATH.`);
 

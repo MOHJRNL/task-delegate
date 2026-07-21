@@ -66,16 +66,6 @@ async function verifyTarget(target, { live, timeoutMs, machineOutput, index, tot
   const started = Date.now();
   const detected = await commandExists(target.binary);
   const item = { target: target.id, binary: target.binary, detected, live: false };
-  if (target.id === 'agy') {
-    Object.assign(item, {
-      status: 'passed',
-      verificationMode: 'manual-host',
-      note: 'Antigravity binary and host integration are available. Headless delegated execution is not supported by the current CLI.',
-      durationMs: Date.now() - started
-    });
-    if (!machineOutput) errorOutput.write(`[${index}/${total}] Antigravity ready — interactive host\n`);
-    return item;
-  }
   if (!detected) {
     Object.assign(item, { status: 'failed', reason: 'binary-not-detected', durationMs: Date.now() - started });
     if (!machineOutput) errorOutput.write(`[${index}/${total}] ${target.name} failed — binary not detected\n`);
@@ -158,9 +148,6 @@ export async function verify({ live = false, targetId = null, jobs = DEFAULT_JOB
   const payload = { schemaVersion: 'task-delegate.verify.v1', live, jobs, timeoutMs, report };
   if (machineOutput) console.log(JSON.stringify(payload, null, 2));
   else {
-    const interactiveHosts = report.filter(
-      x => x.verificationMode === 'manual-host'
-    ).length;
     const livePassed = report.filter(
       x => x.status === 'passed' && x.live === true
     ).length;
@@ -171,7 +158,6 @@ export async function verify({ live = false, targetId = null, jobs = DEFAULT_JOB
 
     console.log(
       `\nVerification complete: ${livePassed} live passed, ` +
-      `${interactiveHosts} interactive host ready, ` +
       `${ready} awaiting live verification, ${failed} failed.`
     );
   }

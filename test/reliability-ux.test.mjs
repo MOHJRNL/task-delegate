@@ -5,12 +5,16 @@ import { spawnSync } from 'node:child_process';
 
 const cli = 'bin/task-delegate.mjs';
 
-test('Antigravity rejection is concise without a stack trace', () => {
-  const result = spawnSync(process.execPath, [cli, 'delegate', '--to', 'agy', '--task', 'test', '--cd', '.'], { encoding: 'utf8' });
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /TaskDelegate error: Antigravity/);
-  assert.doesNotMatch(result.stderr, /at async|file:\/\//);
+test('Antigravity is accepted as a delegation target', () => {
+  const result = spawnSync(process.execPath, [
+    cli, 'delegate', '--to', 'agy', '--task', 'test', '--cd', '.',
+    '--dry-run', '--allow-dirty', '--json'
+  ], { encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr);
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.target, 'agy');
 });
+
 
 test('delegate help documents timeout retries and JSON output', () => {
   const result = spawnSync(process.execPath, [cli, 'delegate', '--help'], { encoding: 'utf8' });
@@ -42,14 +46,12 @@ test('verifier uses bounded worker concurrency', async () => {
   assert.match(manage, /timeoutMs \+ 10_000/);
 });
 
-test('verification summary distinguishes live targets from interactive hosts', async () => {
+test('verification summary treats all seven targets as live-capable', async () => {
   const source = await readFile(
     new URL('../skills/task-delegate/scripts/manage.mjs', import.meta.url),
     'utf8'
   );
-
-  assert.match(source, /verificationMode === 'manual-host'/);
+  assert.doesNotMatch(source, /verificationMode === 'manual-host'/);
   assert.match(source, /x\.status === 'passed' && x\.live === true/);
   assert.match(source, /live passed/);
-  assert.match(source, /interactive host ready/);
 });

@@ -60,14 +60,12 @@ test('Grok activation ignores unrelated attachment context', async () => {
   assert.match(command, /Ignore unrelated attachments/);
 });
 
-test('Antigravity remains origin-only and is rejected as a headless invocation', () => {
+test('Antigravity is a selectable headless target', () => {
   const antigravity = REGISTRY_TARGETS.find(({ id }) => id === 'agy');
-  assert.equal(antigravity.headless, false);
-  assert.equal(antigravity.status, 'interactive-origin-only');
-  assert.throws(
-    () => buildInvocation(antigravity, { prompt: 'test', mode: 'manual' }),
-    /interactive origin host/
-  );
+  assert.equal(antigravity.headless, true);
+  const invocation = buildInvocation(antigravity, { prompt: 'test', mode: 'manual' });
+  assert.equal(invocation.command, 'agy');
+  assert.equal(invocation.args.includes('--print'), true);
 });
 
 test('Antigravity uses its dedicated global skill path', async () => {

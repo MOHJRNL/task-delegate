@@ -3,14 +3,10 @@ import test from 'node:test';
 import { readFile } from 'node:fs/promises';
 
 test('Kimi uses supported prompt flag', async () => {
-  for (const file of [
-    'skills/task-delegate/scripts/core/targets.mjs',
-    'skills/task-delegate/scripts/registry.mjs'
-  ]) {
-    const source = await readFile(file, 'utf8');
-    assert.doesNotMatch(source, /--print/);
-    assert.match(source, /--prompt/);
-  }
+  const core = await readFile('skills/task-delegate/scripts/core/targets.mjs', 'utf8');
+  const registry = await readFile('skills/task-delegate/scripts/registry.mjs', 'utf8');
+  assert.match(core, /id: 'kimi'.*--prompt/);
+  assert.match(registry, /case 'kimi'[\s\S]*--prompt/);
 });
 
 test('runtime normalizes workspace and permission flags', async () => {
@@ -28,9 +24,10 @@ test('changed files include untracked and ignore internal artifacts', async () =
   assert.match(source, /\.task-delegate\//);
 });
 
-test('Antigravity passes manual host verification', async () => {
+test('Antigravity follows the normal live verification path', async () => {
   const source = await readFile('skills/task-delegate/scripts/manage.mjs', 'utf8');
-  assert.match(source, /verificationMode\s*:\s*'manual-host'/);
+  assert.doesNotMatch(source, /verificationMode\s*:\s*'manual-host'/);
+  assert.match(source, /localCliPath/);
 });
 
 test('live verifier invokes the local CLI', async () => {
