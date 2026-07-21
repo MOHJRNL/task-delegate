@@ -233,7 +233,9 @@ export async function delegate(argv) {
   if (options.to && !target) throw new Error(`Unknown target: ${options.to}`);
   if (!target) target = await chooseInteractively(targets);
   const discovered = targets.find((item) => item.id === target.id);
-  if (!discovered?.available) throw new Error(`${target.name} CLI is not available in PATH.`);
+  if (!options.dryRun && !discovered?.available) {
+    throw new Error(`${target.name} CLI is not available in PATH.`);
+  }
 
   const task = options.task || await readTaskInteractively();
   const gitRepo = await isGitRepo(projectDir);

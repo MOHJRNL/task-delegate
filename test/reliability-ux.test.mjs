@@ -9,7 +9,13 @@ test('Antigravity is accepted as a delegation target', () => {
   const result = spawnSync(process.execPath, [
     cli, 'delegate', '--to', 'agy', '--task', 'test', '--cd', '.',
     '--dry-run', '--allow-dirty', '--json'
-  ], { encoding: 'utf8' });
+  ], {
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      PATH: ''
+    }
+  });
   assert.equal(result.status, 0, result.stderr);
   const payload = JSON.parse(result.stdout);
   assert.equal(payload.target, 'agy');
